@@ -1,0 +1,1498 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plattenstube</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=VT323&display=swap">
+<style>
+/* Layout: the room fills the screen; a search drawer sits at the top, the collection list on the right. */
+:root{
+  --bg:#1a1410; --panel:#2a211a; --panel2:#3a2d22; --line:#5a4632;
+  --fg:#f1e4c8; --muted:#b59d7a; --accent:#e5a24a; --good:#8fc46a; --bad:#e06b5a;
+  --display:"Silkscreen","VT323",monospace; --body:"VT323","Courier New",monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:20px;line-height:1.2;display:flex;flex-direction:column;overflow:hidden}
+button,input{font-family:inherit;font-size:inherit;color:inherit}
+header{position:relative;display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px max(16px,env(safe-area-inset-left,0px)) 10px max(16px,env(safe-area-inset-right,0px));background:var(--panel);border-bottom:3px solid var(--line);z-index:30}
+header h1{font-family:var(--display);font-size:16px;margin:0;letter-spacing:1px;color:var(--accent)}
+.search{position:relative;flex:1 1 280px;min-width:0}
+.search input{width:100%;background:var(--bg);border:3px solid var(--line);padding:6px 10px;outline:none;image-rendering:pixelated}
+.search input:focus{border-color:var(--accent)}
+.results{position:absolute;left:0;right:0;top:100%;z-index:20;background:var(--panel2);border:3px solid var(--line);max-height:60vh;overflow:auto;display:none}
+.results.open{display:block}
+.result{display:flex;gap:10px;align-items:center;padding:6px 8px;border-bottom:2px solid var(--line);cursor:pointer}
+.result:hover,.result:focus{background:var(--panel)}
+.result img{width:40px;height:40px;image-rendering:pixelated;flex:none;background:#000}
+.result .t{min-width:0;flex:1}
+.result .t b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.result .t span{color:var(--muted)}
+.result .add{font-family:var(--display);font-size:10px;background:var(--accent);color:#1a1410;border:0;padding:6px 8px;cursor:pointer;flex:none}
+.result .add[disabled]{background:var(--muted);cursor:default}
+.status{color:var(--muted);min-height:1.2em;flex:1 1 100%}
+.stage{position:relative}
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(26,20,16,.55)}
+.overlay .hint{color:var(--muted);font-size:17px}
+.primary.big{font-size:14px;padding:14px 22px;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.foot{display:flex;flex-direction:column;gap:8px;align-items:flex-start;padding:8px 12px;border-top:3px solid var(--line);margin-top:auto}
+.whoRow{display:flex;gap:8px;align-items:center;width:100%;min-width:0}
+.whoRow .hint{color:var(--muted)}
+.whoRow #who{color:var(--accent);flex:1;min-width:0;overflow-wrap:anywhere}
+.settings{position:absolute;top:100%;right:max(16px,env(safe-area-inset-right,0px));width:min(640px,calc(100% - 32px));background:var(--bg);border:3px solid var(--line);padding:10px;display:flex;flex-direction:column;gap:8px;box-shadow:0 10px 30px rgba(0,0,0,.5)} /* floats over the room instead of pushing it down */
+.settings label{color:var(--muted)}
+.settings input{background:var(--panel);border:3px solid var(--line);padding:6px 10px;outline:none;width:100%}
+.settings .hint{color:var(--muted);font-size:17px;line-height:1.3}
+.settings code{color:var(--fg);background:var(--panel2);padding:0 4px;user-select:all;word-break:break-all}
+.settings .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.primary{font-family:var(--display);font-size:10px;background:#1db954;color:#0b2914;border:0;padding:8px 12px;cursor:pointer}
+.primary[disabled]{background:var(--muted);cursor:default}
+.mini{background:var(--panel2);border:2px solid var(--line);padding:2px 8px;cursor:pointer;font-size:17px}
+main{flex:1;display:flex;min-height:0}
+.stage{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 40%,#2c2219 0%,#1a1410 70%)}
+canvas{image-rendering:pixelated;image-rendering:crisp-edges;max-width:100%;max-height:100%;cursor:pointer}
+aside{width:260px;flex:none;background:var(--panel);border-left:3px solid var(--line);display:flex;flex-direction:column;min-height:0}
+aside h2{font-family:var(--display);font-size:11px;margin:0;padding:10px 12px;border-bottom:3px solid var(--line);color:var(--muted);letter-spacing:1px}
+.pick{padding:10px 12px;border-bottom:3px solid var(--line);height:104px;box-sizing:border-box;overflow:hidden;display:flex;gap:10px;align-items:flex-start}
+.pick img{width:72px;height:72px;image-rendering:pixelated;background:#000;flex:none;border:3px solid var(--line)}
+.pick .t{min-width:0}
+.pick .t b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:var(--accent);line-height:1.1}
+.pick .t span{color:var(--muted);display:block;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pick-empty{color:var(--muted)}
+.now{padding:10px 12px;border-bottom:3px solid var(--line);min-height:84px}
+.now b{color:var(--accent)}
+.now .track{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now button{margin-top:6px;background:var(--panel2);border:2px solid var(--line);padding:2px 10px;cursor:pointer}
+.vol{padding:8px 12px;border-bottom:3px solid var(--line);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.vol .hint{color:var(--muted);font-size:17px;flex:1 1 100%}
+.vol label{display:flex;align-items:center;gap:8px;flex:1;min-width:140px}
+.vol #volpct{color:var(--accent);min-width:3.2em;font-variant-numeric:tabular-nums}
+.vol input[type=range]{flex:1;accent-color:var(--accent);cursor:pointer}
+.shelf{overflow:auto;flex:1}
+.album{display:flex;gap:8px;align-items:center;padding:6px 10px;border-bottom:2px solid var(--line);cursor:pointer}
+.album:hover{background:var(--panel2)}
+.album.playing{background:#3d2d14}
+.album.hover{background:var(--panel2)}
+.album img{width:36px;height:36px;image-rendering:pixelated;background:#000;flex:none}
+.album .t{min-width:0;flex:1}
+.album .t b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.album .t span{color:var(--muted);font-size:17px}
+.album .x{background:none;border:0;color:var(--muted);cursor:pointer;padding:4px}
+body:not(.owner) .search,body:not(.owner) .album .x,body:not(.owner) #share,body:not(.owner) #export{display:none}  /* guests get the owner's collection and cannot change it */
+.album .x:hover{color:var(--bad)}
+.empty{padding:14px 12px;color:var(--muted)}
+@media (max-width:700px){
+  main{flex-direction:column}
+  aside{width:auto;border-left:0;border-top:3px solid var(--line);max-height:42%}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>PLATTENSTUBE</h1>
+  <div class="search">
+    <input id="q" type="search" placeholder="Search album or artist… e.g. Kind of Blue Miles Davis" autocomplete="off">
+    <div class="results" id="results"></div>
+  </div>
+  <div class="status" id="status">The cabinet is empty. Search for an album and add it to the shelf.</div>
+</header>
+<main>
+  <div class="stage"><canvas id="c"></canvas>
+    <div class="overlay" id="overlay"><button id="connect" class="primary big">Connect to Spotify</button><div class="hint">Needs Spotify Premium. The room fills once you are in.</div></div>
+  </div>
+  <aside>
+    <h2>RECORD</h2>
+    <div class="pick" id="pick"><div class="pick-empty">Hover a spine in the cabinet to see which record it is. Click to put it on.</div></div>
+    <h2>NOW PLAYING</h2>
+    <div class="now" id="now"><span style="color:var(--muted)">Nothing yet. Pick a record from the cabinet.</span></div>
+    <div class="vol" id="vol">
+      <label id="vollabel"><span id="volpct">80%</span><input id="volslider" type="range" min="0" max="100" step="1" value="80"></label>
+      <span id="volhint" class="hint" hidden>he is on his way to the record player…</span>
+    </div>
+    <h2>SCHALLPLATTENSCHRANK</h2>
+    <div class="shelf" id="shelf"></div>
+    <div class="foot">
+      <div class="whoRow"><span class="hint">Spotify:</span><span id="who"></span></div>
+      <button id="share" class="mini" title="Anyone who opens the link gets these records added to their cabinet">Copy collection link</button>
+      <button id="export" class="mini" title="Download collection.json — put it next to plattenstube.html on the server and every guest gets this collection">Save collection file</button>
+      <button id="disconnect" class="mini" hidden>Log out</button>
+    </div>
+  </aside>
+</main>
+
+<script src="https://sdk.scdn.co/spotify-player.js"></script>
+<script>
+/* ---------- data ---------- */
+const COLS = 5, ROWS = 3, PER = 7, SLOTS = COLS*ROWS*PER; // 105 records
+let albums = [];
+try { albums = JSON.parse(localStorage.getItem('plattenstube') || '[]'); } catch (e) { albums = []; }
+function sortKey(a){ return (a.artist || '').toLowerCase().replace(/^(the|die|der|das|les|los|las|el|la)\s+/, ''); }
+function sortAlbums(){ albums.sort((a, b) => sortKey(a).localeCompare(sortKey(b), 'de') || (a.year || '').localeCompare(b.year || '') || a.title.localeCompare(b.title, 'de')); }
+/* guest view: open plattenstube.html?guest (or #guest) to see the page exactly as invited people see it; your own cabinet is left untouched */
+let guestView = false;
+try { // ?guest in the address → guest view; it only survives the Spotify login round trip, a plain address is your own cabinet again
+  if (/[?&#]guest\b/.test(location.search + location.hash)) sessionStorage.setItem('plattenstube.guest', '1');
+  else if (!/[?&]code=/.test(location.search)) sessionStorage.removeItem('plattenstube.guest');
+  guestView = sessionStorage.getItem('plattenstube.guest') === '1';
+} catch (e) {}
+function save(){ if (guestView) return; try { localStorage.setItem('plattenstube', JSON.stringify(albums)); } catch (e) {} }
+
+const imgCache = {};
+function coverImage(a){
+  if (imgCache[a.id]) return imgCache[a.id];
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => { a.color = dominant(img); draw(); };
+  img.onerror = () => { const i2 = new Image(); i2.onload = draw; i2.src = a.cover; imgCache[a.id] = i2; };
+  img.src = a.cover;
+  imgCache[a.id] = img;
+  return img;
+}
+function fallbackColor(id){ let h=0; for (const c of String(id)) h=(h*31+c.charCodeAt(0))>>>0; return `hsl(${h%360},45%,${38+(h>>8)%18}%)`; }
+function dominant(img){
+  try {
+    const t = document.createElement('canvas'); t.width = t.height = 8;
+    const x = t.getContext('2d'); x.drawImage(img, 0, 0, 8, 8);
+    const d = x.getImageData(0,0,8,8).data; let r=0,g=0,b=0;
+    for (let i=0;i<d.length;i+=4){ r+=d[i]; g+=d[i+1]; b+=d[i+2]; }
+    const n = d.length/4; return `rgb(${r/n|0},${g/n|0},${b/n|0})`;
+  } catch (e) { return null; }
+}
+
+/* ---------- Spotify auth (Authorization Code + PKCE, no server) ---------- */
+const REDIRECT = location.origin + location.pathname;
+const SCOPES = 'streaming user-read-email user-read-private user-modify-playback-state user-read-playback-state';
+let auth = null;
+try { auth = JSON.parse(localStorage.getItem('plattenstube.auth') || 'null'); } catch (e) {}
+const CLIENT_ID = '5f58f8127f9d424296ddae7aeb606d5c';
+const OWNER_ID = 'dklock';                    // only this Spotify account can change the collection; everyone else sees the owner's records (collection.json next to this file)
+let isOwner = false;
+const overlay = document.getElementById('overlay');
+function saveAuth(){ try { auth ? localStorage.setItem('plattenstube.auth', JSON.stringify(auth)) : localStorage.removeItem('plattenstube.auth'); } catch (e) {} }
+
+function b64url(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+async function login(){
+  const cid = CLIENT_ID;
+  if (location.protocol === 'file:') { setStatus('Spotify cannot redirect back to a file:// page. Serve this file over http://127.0.0.1 (see instructions).'); return; }
+  const verifier = b64url(crypto.getRandomValues(new Uint8Array(64)));
+  const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+  sessionStorage.setItem('plattenstube.verifier', verifier);
+  const p = new URLSearchParams({ client_id: cid, response_type: 'code', redirect_uri: REDIRECT, scope: SCOPES, code_challenge_method: 'S256', code_challenge: challenge });
+  location.href = 'https://accounts.spotify.com/authorize?' + p;
+}
+async function tokenRequest(body){
+  const r = await fetch('https://accounts.spotify.com/api/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(body) });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error_description || d.error || 'token error');
+  auth = { access: d.access_token, refresh: d.refresh_token || (auth && auth.refresh), exp: Date.now() + (d.expires_in - 60) * 1000 };
+  saveAuth();
+}
+/* ---------- collection links: #c=<album id>,<album id>,… (Spotify album ids) ---------- */
+function collectionLink(){ return REDIRECT + '#c=' + albums.map(a => a.id).join(','); }
+function pendingImportFromHash(){
+  if (/[?&#]guest\b/.test(location.search + location.hash) && !/code=/.test(location.search)) history.replaceState(null, '', REDIRECT);
+  const m = /[#&]c=([A-Za-z0-9,]+)/.exec(location.hash);
+  if (!m) return;
+  try { sessionStorage.setItem('plattenstube.import', m[1]); } catch (e) {}
+  history.replaceState(null, '', REDIRECT);
+}
+async function fetchAlbum(id){ // one album by id -> the shelf's album record
+  const d = await api('/albums/' + id);
+  const tracks = (d.tracks && d.tracks.items || []).map(t => ({ title: t.name, uri: t.uri, preview: t.preview_url }));
+  return { id: d.id, uri: d.uri, title: d.name, artist: d.artists.map(a => a.name).join(', '), cover: (d.images[1]||d.images[0]||{}).url, year: (d.release_date||'').slice(0,4), tracks };
+}
+async function runPendingImport(){
+  let ids = null;
+  try { ids = sessionStorage.getItem('plattenstube.import'); } catch (e) {}
+  if (!ids) return;
+  if (!auth) { setStatus('This link carries a record collection. Connect to Spotify to add it to your cabinet.'); return; }
+  if (!isOwner) { try { sessionStorage.removeItem('plattenstube.import'); } catch (e) {} return; }
+  const wanted = [...new Set(ids.split(',').filter(Boolean))].filter(id => !albums.some(a => a.id === id));
+  try { sessionStorage.removeItem('plattenstube.import'); } catch (e) {}
+  if (!wanted.length) { setStatus('All records from that link are already in your cabinet.'); return; }
+  let added = 0, failed = 0;
+  for (const id of wanted) {
+    if (albums.length >= SLOTS) break;
+    setStatus(`Adding records from the link… ${added + 1}/${wanted.length}`);
+    try { const a = await fetchAlbum(id); albums.push(a); coverImage(a); added++; if (added % 5 === 0) { save(); renderShelf(); } }
+    catch (e) { failed++; }
+  }
+  sortAlbums(); save(); renderShelf(); draw();
+  setStatus(`Added ${added} record${added === 1 ? '' : 's'} from the link` + (failed ? ` (${failed} could not be found)` : '') + (albums.length >= SLOTS ? '; the cabinet is full now.' : '.'));
+}
+async function loadSharedCollection(){ // guests: the cabinet is the owner's, taken from collection.json next to this page
+  let ids = null;
+  try { const r = await fetch('collection.json', { cache: 'no-store' }); if (r.ok) { const d = await r.json(); ids = Array.isArray(d) ? d : d.ids; } } catch (e) {}
+  if (!ids) { if (!albums.length) setStatus('The record collection has not been published yet.'); return; }   // offline or not published: keep what we had
+  ids = [...new Set(ids.filter(id => /^[A-Za-z0-9]+$/.test(id)))].slice(0, SLOTS);
+  const have = Object.fromEntries(albums.map(a => [a.id, a]));
+  const next = [];
+  for (const id of ids) {
+    if (have[id]) { next.push(have[id]); continue; }
+    setStatus(`Fetching the collection… ${next.length + 1}/${ids.length}`);
+    try { next.push(await fetchAlbum(id)); } catch (e) {}
+  }
+  albums = next; albums.forEach(a => { a.taken = false; coverImage(a); }); sortAlbums(); save(); renderShelf(); draw();
+  setStatus(albums.length ? `${albums.length} records in the cabinet. Pick one.` : 'The record collection is empty.');
+}
+document.getElementById('export').onclick = () => { // owner: download collection.json for the server
+  const blob = new Blob([JSON.stringify({ ids: albums.map(a => a.id) }, null, 0)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'collection.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  setStatus('collection.json saved — upload it next to plattenstube.html and guests will see this collection.');
+};
+document.getElementById('share').onclick = () => {
+  const link = collectionLink(), btn = document.getElementById('share');
+  if (!albums.length) { setStatus('The cabinet is empty, nothing to share yet.'); return; }
+  navigator.clipboard.writeText(link).then(() => { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy link to this collection', 1500); })
+    .catch(() => { window.prompt('Copy this link:', link); });
+};
+async function handleRedirect(){
+  const u = new URL(location.href);
+  const code = u.searchParams.get('code'), err = u.searchParams.get('error');
+  if (!code && !err) return;
+  history.replaceState(null, '', REDIRECT);
+  if (err) { setStatus('Spotify login was cancelled (' + err + ').'); return; }
+  try {
+    await tokenRequest({ client_id: CLIENT_ID, grant_type: 'authorization_code', code, redirect_uri: REDIRECT, code_verifier: sessionStorage.getItem('plattenstube.verifier') || '' });
+    setStatus('Connected to Spotify.');
+  } catch (e) { setStatus('Spotify login failed: ' + e.message); }
+}
+async function token(){
+  if (!auth) return null;
+  if (Date.now() > auth.exp) {
+    try { await tokenRequest({ client_id: CLIENT_ID, grant_type: 'refresh_token', refresh_token: auth.refresh }); }
+    catch (e) { auth = null; saveAuth(); updateAuthUI(); return null; }
+  }
+  return auth.access;
+}
+async function api(path, opts = {}){
+  const t = await token();
+  if (!t) throw new Error('not logged in');
+  const r = await fetch('https://api.spotify.com/v1' + path, { ...opts, headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json', ...(opts.headers||{}) } });
+  if (r.status === 204) return null;
+  const d = await r.json().catch(() => null);
+  if (!r.ok) throw new Error((d && d.error && d.error.message) || ('HTTP ' + r.status));
+  return d;
+}
+let me = null;
+async function updateAuthUI(){
+  const who = document.getElementById('who');
+  overlay.hidden = !!auth;
+  document.getElementById('disconnect').hidden = !auth;
+  q.disabled = !auth;
+  if (!auth) { who.textContent = 'not connected'; who.style.color = 'var(--muted)'; leaveRoom(); return; }
+  who.style.color = '';
+  try {
+    me = await api('/me'); who.textContent = `${me.display_name || me.id}`;
+    isOwner = me.id === OWNER_ID && !guestView; document.body.classList.toggle('owner', isOwner);
+    if (!isOwner) await loadSharedCollection();                                   // guests get the owner's cabinet
+    initPlayer(); enterRoom();
+  }
+  catch (e) { who.textContent = 'Session problem: ' + e.message; }
+}
+document.getElementById('connect').onclick = login;
+function finishLogout(){ auth = null; me = null; saveAuth(); updateAuthUI(); if (sdk.player) { sdk.player.disconnect(); sdk.player = null; sdk.device = null; } }
+document.getElementById('disconnect').onclick = () => { // he puts the record back, walks out, and only then are you logged out
+  if (!scene.manIn) { finishLogout(); return; }
+  if (busy()) { setStatus('He will leave as soon as he is free.'); }
+  const steps = [], edge = HER_SPOTS.edge;
+  let at = standUp(steps);
+  at = returnLegs(at, steps);                                                     // the record on the turntable goes back to its slot
+  steps.push(...walkTo(at, edge));
+  steps.push(wait(1200, () => { scene.man.facing = 1; }));
+  steps.push(wait(600, () => { finishLogout(); }));                               // gone; the room is empty again
+  if (busy()) anim.queue.push(...steps); else anim.queue = steps;
+  document.getElementById('disconnect').disabled = true;
+  setStatus('He is putting things away and heading out…');
+};
+
+/* ---------- search ---------- */
+const q = document.getElementById('q'), results = document.getElementById('results'), statusEl = document.getElementById('status');
+let timer, searchSeq = 0;
+q.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(search, 350); });
+q.addEventListener('keydown', e => { if (e.key === 'Escape') results.classList.remove('open'); if (e.key === 'Enter') { clearTimeout(timer); search(); } });
+document.addEventListener('click', e => { if (!e.target.closest('.search')) results.classList.remove('open'); });
+q.addEventListener('focus', () => { if (results.children.length) results.classList.add('open'); });
+function setStatus(t){ statusEl.textContent = t; }
+
+async function search(){
+  const text = q.value.trim();
+  if (text.length < 2) { results.classList.remove('open'); return; }
+  if (!auth) { setStatus('Connect to Spotify first.'); return; }
+  const seq = ++searchSeq;
+  setStatus('Searching Spotify…');
+  let list;
+  try {
+    const d = await api('/search?type=album&limit=10&q=' + encodeURIComponent(text));
+    list = d.albums.items.map(r => ({ id: r.id, uri: r.uri, title: r.name, artist: r.artists.map(a => a.name).join(', '), year: (r.release_date||'').slice(0,4),
+      cover: (r.images[r.images.length-1]||{}).url, coverBig: (r.images[1]||r.images[0]||{}).url }));
+  } catch (e) { if (seq === searchSeq) setStatus('Search failed: ' + e.message); return; }
+  if (seq !== searchSeq) return;
+  results.innerHTML = '';
+  if (!list.length) { setStatus('No albums found.'); results.classList.remove('open'); return; }
+  for (const r of list) {
+    const el = document.createElement('div'); el.className = 'result'; el.tabIndex = 0;
+    const have = albums.some(a => a.id === r.id);
+    el.innerHTML = `<img alt=""><div class="t"><b></b><span></span></div><button class="add" ${have?'disabled':''}>${have?'ON SHELF':'ADD'}</button>`;
+    el.querySelector('img').src = r.cover || '';
+    el.querySelector('b').textContent = r.title;
+    el.querySelector('span').textContent = r.artist + (r.year ? ' · ' + r.year : '');
+    el.querySelector('.add').onclick = ev => { ev.stopPropagation(); addAlbum(r, el.querySelector('.add')); };
+    el.onclick = () => { if (!have) addAlbum(r, el.querySelector('.add')); };
+    results.appendChild(el);
+  }
+  results.classList.add('open');
+  setStatus(`${list.length} results. Click one to add it to the cabinet.`);
+}
+
+async function addAlbum(r, btn){
+  if (albums.length >= SLOTS) { setStatus(`The cabinet is full (${SLOTS} records). Remove one first.`); return; }
+  btn.disabled = true; btn.textContent = 'FETCHING…';
+  setStatus(`Fetching "${r.title}"…`);
+  try {
+    const d = await api('/albums/' + r.id + '/tracks?limit=50');
+    const tracks = d.items.map(t => ({ title: t.name, uri: t.uri, preview: t.preview_url }));
+    const a = { id: r.id, uri: r.uri, title: r.title, artist: r.artist, cover: r.coverBig, year: r.year, tracks };
+    albums.push(a); sortAlbums(); save(); coverImage(a);
+    btn.textContent = 'ON SHELF';
+    setStatus(`"${a.title}" is in the cabinet now (${tracks.length} tracks).`);
+    renderShelf(); draw();
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'ADD';
+    setStatus('Could not fetch that album (' + e.message + ').');
+  }
+}
+
+/* ---------- shelf list ---------- */
+const shelfEl = document.getElementById('shelf');
+function renderShelf(){
+  const keep = shelfEl.scrollTop;
+  shelfEl.innerHTML = '';
+  if (!albums.length) { shelfEl.innerHTML = `<div class="empty">${isOwner ? 'Empty. Add albums with the search above.' : 'The collection has not been published yet.'}</div>`; return; }
+  albums.forEach((a, i) => {
+    const el = document.createElement('div'); el.className = 'album' + (player.album === a ? ' playing' : '');
+    el.innerHTML = `<img alt=""><div class="t"><b></b><span></span></div><button class="x" title="Remove">✕</button>`;
+    el.querySelector('img').src = a.cover;
+    el.querySelector('b').textContent = a.title;
+    el.querySelector('span').textContent = a.artist + (a.year ? ' · ' + a.year : '');
+    el.onclick = () => selectAlbum(i);
+    el.onmouseenter = () => setHover(a); el.onmouseleave = () => setHover(null);
+    el.querySelector('.x').onclick = ev => { ev.stopPropagation(); if (scene.record === a) stopPlayback(); albums.splice(i,1); save(); renderShelf(); draw(); };
+    shelfEl.appendChild(el);
+  });
+  shelfEl.scrollTop = keep;
+}
+
+
+/* ---------- vinyl crackle: a few seconds of hiss and pops when the needle drops and when a side runs out ---------- */
+const crackle = { ctx: null };
+function playCrackle(ms){
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    if (!crackle.ctx) crackle.ctx = new AC();
+    const ac = crackle.ctx; if (ac.state === 'suspended') ac.resume();
+    const sr = ac.sampleRate, n = Math.floor(sr * ms / 1000), buf = ac.createBuffer(1, n, sr), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random()*2-1) * 0.012;                                       // faint hiss
+    const pops = Math.floor(ms / 140);
+    for (let k = 0; k < pops; k++) { const at = Math.floor(Math.random() * (n - 400)), amp = 0.08 + Math.random()*0.18, len = 40 + Math.random()*260; for (let i = 0; i < len; i++) d[at+i] += (Math.random()*2-1) * amp * Math.exp(-i/(len/4)); } // pops and ticks
+    const src = ac.createBufferSource(); src.buffer = buf;
+    const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900;
+    const g = ac.createGain(); const t = ac.currentTime;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.15); g.gain.setValueAtTime(0.35, t + ms/1000 - 0.8); g.gain.exponentialRampToValueAtTime(0.0001, t + ms/1000);
+    src.connect(hp); hp.connect(g); g.connect(ac.destination); src.start(t); src.stop(t + ms/1000 + 0.05);
+  } catch (e) {}
+}
+
+/* ---------- playback: Spotify Web Playback SDK (Premium), preview fallback ---------- */
+const player = { album: null, index: 0, audio: null, playing: false, mode: null, lastTrack: '' };
+/* ---------- whistling: starts at the earliest 30 s into the music, lasts 10–30 s, then a break ---------- */
+const whistle = { on: false, next: Infinity, until: 0 };
+const rnd = (a, b) => a + Math.random() * (b - a);
+function whistleReset(){ whistle.on = false; whistle.next = performance.now() + rnd(30000, 45000); }
+function whistleTick(now){
+  if (!player.playing || !scene.man.sitting) { if (whistle.on) { whistle.on = false; whistle.next = now + rnd(30000, 45000); } return; }
+  if (!whistle.on && now >= whistle.next) { whistle.on = true; whistle.until = now + rnd(10000, 30000); }
+  else if (whistle.on && now >= whistle.until) { whistle.on = false; whistle.next = now + rnd(40000, 90000); }
+}
+const whistling = () => whistle.on && player.playing && scene.man.sitting && !talking() && !scene.doze;
+const sdk = { player: null, device: null, ready: null };
+const nowEl = document.getElementById('now');
+window.onSpotifyWebPlaybackSDKReady = () => { sdk.loaded = true; if (auth) initPlayer(); };
+function initPlayer(){
+  if (sdk.player || !window.Spotify) return;
+  const p = new Spotify.Player({ name: 'Plattenstube', getOAuthToken: cb => token().then(t => cb(t)), volume: volume.level });
+  sdk.ready = new Promise(res => p.addListener('ready', ({ device_id }) => { sdk.device = device_id; res(device_id); }));
+  p.addListener('not_ready', () => { sdk.device = null; });
+  p.addListener('initialization_error', e => setStatus('Player error: ' + e.message));
+  p.addListener('authentication_error', e => setStatus('Player auth error: ' + e.message));
+  p.addListener('account_error', e => setStatus('Spotify Premium is needed for playback: ' + e.message));
+  p.addListener('player_state_changed', st => {
+    if (!st || !player.album) return;
+    const t = st.track_window.current_track;
+    renderNow(player.album, t ? t.name : '', st.paused);
+    if (st.paused && st.position === 0 && st.track_window.previous_tracks.length && !st.track_window.next_tracks.length) endOfSide();
+  });
+  p.connect();
+  sdk.player = p;
+}
+function renderNow(a, trackName, paused){
+  nowEl.innerHTML = `<b></b><div class="track"></div><div style="color:var(--muted)"></div><button id="stop">${paused ? 'Play' : 'Stop'}</button>`;
+  nowEl.querySelector('b').textContent = a.title;
+  nowEl.querySelector('.track').textContent = (paused ? '⏸ ' : '▶ ') + (trackName || '');
+  nowEl.querySelector('div[style]').textContent = a.artist;
+  nowEl.querySelector('#stop').onclick = () => togglePlayback();
+  player.lastTrack = trackName;
+}
+async function startPlayback(a){
+  player.album = a; player.index = 0; player.playing = true; renderShelf(); whistleReset(); scene.playSince = scene.t; scene.doze = false;
+  renderNow(a, 'starting…', false);
+  // 1) Full album through Spotify Connect (Premium)
+  if (sdk.player) {
+    try {
+      const dev = sdk.device || await Promise.race([sdk.ready, new Promise((_, rej) => setTimeout(() => rej(new Error('player not ready')), 8000))]);
+      await sdk.player.activateElement();
+      await api('/me/player/play?device_id=' + dev, { method: 'PUT', body: JSON.stringify({ context_uri: a.uri }) });
+      player.mode = 'sdk';
+      setTimeout(async () => { // browsers block sound until the page has been clicked once: tell the listener, and resume on the first click
+        try { const st = await sdk.player.getCurrentState(); if (st && st.paused && player.playing && player.album === a) { player.needsClick = true; setStatus('Click anywhere in the room to let the music play.'); } } catch (e) {}
+      }, 2500);
+      return;
+    } catch (e) { setStatus('Spotify playback failed (' + e.message + '). Trying previews…'); }
+  }
+  // 2) 30-second previews, if Spotify provides any for this album
+  if (a.tracks.some(t => t.preview)) { player.mode = 'preview'; playPreview(); return; }
+  player.mode = null;
+  renderNow(a, 'No audio: Spotify Premium is needed to play this record.', true);
+}
+function playPreview(){
+  const a = player.album; if (!a) return;
+  while (player.index < a.tracks.length && !a.tracks[player.index].preview) player.index++;
+  if (player.index >= a.tracks.length) { endOfSide(); return; }
+  if (player.audio) player.audio.pause();
+  const t = a.tracks[player.index];
+  const au = new Audio(t.preview); player.audio = au; au.volume = volume.level;
+  au.onended = au.onerror = () => { player.index++; playPreview(); };
+  au.play().catch(() => {});
+  renderNow(a, `${player.index+1}/${a.tracks.length} · ${t.title} (preview)`, false);
+}
+function audioStop(){ // record comes off the turntable
+  if (player.audio) { player.audio.pause(); player.audio = null; }
+  if (player.mode === 'sdk' && sdk.player) sdk.player.pause().catch(() => {});
+  player.playing = false; player.album = null; player.mode = null; renderShelf();
+}
+function audioPause(){ // arm lifted, record stays on
+  if (player.mode === 'preview' && player.audio) player.audio.pause();
+  if (player.mode === 'sdk' && sdk.player) sdk.player.pause().catch(() => {});
+  player.playing = false;
+  if (player.album) renderNow(player.album, player.lastTrack || '', true);
+}
+function audioResume(){ // arm lowered again
+  const a = player.album; if (!a) return;
+  player.playing = true; whistleReset(); scene.playSince = scene.t;
+  if (player.mode === 'preview' && player.audio) { player.audio.play().catch(() => {}); renderNow(a, player.lastTrack || '', false); }
+  else if (player.mode === 'sdk' && sdk.player) { sdk.player.resume().catch(() => startPlayback(a)); renderNow(a, player.lastTrack || '', false); }
+  else startPlayback(a);
+}
+function endOfSide(){ // the album ran out: the record keeps turning in the run-out groove for a while, then he gets up and lifts the arm
+  if (!player.playing) return;
+  player.playing = false; scene.runout = scene.t + 7000; playCrackle(6500);
+  if (!busy()) {
+    const steps = [{ type: 'until', test: () => scene.t >= scene.runout }];
+    standUp(steps); steps.push(...walkTo(POS.stand, POS.tt)); steps.push(wait(400, () => { scene.armDown = false; scene.runout = 0; audioPause(); }));
+    const others = albums.map((a, i) => i).filter(i => albums[i] !== scene.record);
+    if (others.length) { // then he puts that one away and picks another at random
+      const next = others[Math.floor(Math.random()*others.length)];
+      steps.push(wait(900, () => {}));
+      const at = returnLegs(POS.tt, steps);
+      fetchLegs(next, at, steps);
+    }
+    sitDown(POS.tt, steps); anim.queue = steps;
+  } else { scene.armDown = false; scene.runout = 0; }
+}
+function stopPlayback(){ // record removed from the shelf while on the turntable
+  audioStop(); scene.record = null; scene.armDown = false; scene.man.hold = null;
+  nowEl.innerHTML = '<span style="color:var(--muted)">Record removed.</span>';
+}
+
+/* ---------- scene / animation ---------- */
+const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+const W = 400, H = 300; canvas.width = W; canvas.height = H;
+function fit(){
+  const box = canvas.parentElement.getBoundingClientRect();
+  const s = Math.max(1, Math.floor(Math.min(box.width / W, box.height / H) * 2) / 2);   // half-step scaling keeps pixels mostly even while using the space
+  canvas.style.width = (W*s) + 'px'; canvas.style.height = (H*s) + 'px';
+}
+addEventListener('resize', fit); fit();
+
+// Isometric projection: +x goes down-right, +y goes down-left, +z goes up.
+const CX = 212, CY = 112;
+const P = (x,y,z) => [CX + x - y, CY + (x+y)/2 - z];
+function poly(pts, fill){ ctx.fillStyle = fill; ctx.beginPath(); pts.forEach((p,i)=> i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.fill(); }
+function shade(c, k){ // c = [r,g,b]
+  return `rgb(${c[0]*k|0},${c[1]*k|0},${c[2]*k|0})`;
+}
+// box with corner (x,y,z), size (w,d,h). Draws top, +x side (left-dark), +y side (front).
+function box(x,y,z,w,d,h,c, opts={}){
+  const t = opts.top ?? 1.0, f = opts.front ?? 0.8, s = opts.side ?? 0.6;
+  if (h>0) {
+    poly([P(x+w,y,z),P(x+w,y+d,z),P(x+w,y+d,z+h),P(x+w,y,z+h)], shade(c,s));
+    poly([P(x,y+d,z),P(x+w,y+d,z),P(x+w,y+d,z+h),P(x,y+d,z+h)], shade(c,f));
+  }
+  poly([P(x,y,z+h),P(x+w,y,z+h),P(x+w,y+d,z+h),P(x,y+d,z+h)], shade(c,t));
+}
+function shearBox(x,y,z,w,d,h,dx,dy,c){ // a box whose top stays put and whose bottom is shifted by (dx,dy): a limb rotated about its top end
+  poly([P(x+w+dx,y+dy,z),P(x+w+dx,y+d+dy,z),P(x+w,y+d,z+h),P(x+w,y,z+h)], shade(c,0.6));
+  poly([P(x+dx,y+d+dy,z),P(x+w+dx,y+d+dy,z),P(x+w,y+d,z+h),P(x,y+d,z+h)], shade(c,0.8));
+  poly([P(x,y,z+h),P(x+w,y,z+h),P(x+w,y+d,z+h),P(x,y+d,z+h)], shade(c,1.0));
+}
+function ellipse(x,y,z,rx,fill){ const [sx,sy]=P(x,y,z); ctx.fillStyle=fill; ctx.beginPath(); ctx.ellipse(sx,sy,rx,rx/2,0,0,Math.PI*2); ctx.fill(); }
+
+// colors
+const WOOD=[150,96,52], WOODD=[96,58,30], WALL=[86,72,66], WALL2=[72,58,54], FLOOR=[118,80,44], FLOOR2=[104,70,38],
+      CHAIR=[132,62,52], SKIN=[232,186,142], CARD=[110,120,86], CARD2=[90,100,70], TROUS=[70,66,78], SHOE=[40,34,30], POT=[172,96,66], LEAF=[76,130,58], LEAF2=[96,160,70],
+      TABLE=[122,80,46], TT=[196,172,130], PLATTER=[40,40,44], HAT=[178,138,96], BEARD=[52,38,30];
+
+// Cabinet geometry (against the right back wall, plane y=0)
+const CAB = { x:16, y:2, w:150, d:22, h:96 };
+const CUB = { w:26, h:26, gapX:4, gapY:4, x0:CAB.x+8, z0:12 };
+function cubbyRect(c){ // iso-face rectangle for cubby c on the front face (plane y=CAB.y+CAB.d)
+  const col = c % COLS, row = Math.floor(c / COLS);
+  const x = CUB.x0 + col*(CUB.w+CUB.gapX);
+  const z = CUB.z0 + (ROWS-1-row)*(CUB.h+CUB.gapY);
+  return { x, z, y: CAB.y+CAB.d };
+}
+const SP = { w: 3, gap: 0.5, pad: 1.5 };
+function slotRect(i){ // spine i: stands in cubby floor(i/PER), position i%PER
+  const c = cubbyRect(Math.floor(i / PER)), p = i % PER;
+  return { x: c.x + SP.pad + p*(SP.w+SP.gap), w: SP.w, z: c.z + 1, h: CUB.h - 3, y: c.y };
+}
+
+const CHAIRPOS = {x:98,y:106};
+const SEAT = {x:CHAIRPOS.x+4, y:CHAIRPOS.y+12}; // centred on the cushion, shins drop in front of the seat edge
+const scene = { man:{x:SEAT.x,y:SEAT.y,z:0,sitting:true,bob:0,facing:1,hold:null}, manIn:false, record:null, armDown:false, runout:0, angle:0, t:0, doze:false, playSince:0 };
+const TTPOS = {x:34,y:112};       // table for the turntable
+const anim = { queue:[], cur:null, start:0 };
+
+function lerp(a,b,t){ return a+(b-a)*t; }
+function go(from, to, dur){ return { type:'walk', from, to, dur }; }
+function wait(dur, fn){ return { type:'wait', dur, fn }; }
+
+/* ---------- walking: A* on a floor grid around the furniture ---------- */
+const STEP = 4, WALK_SPEED = 0.045; // units per ms
+const PLANTS = [[130,30],[152,96],[154,128]]; // [x,y]; the second one is the big one
+const CATPOS = { x: 88, y: 153, w: 19, d: 14 };
+const LAMP = { x: 116, y: 86, standAt: { x: 132, y: 88 } };   // floor lamp behind the armchair, and where he stands to switch it
+/* ---------- time of day (real clock): darkness 0 by day, rising through dusk to 1 at night ---------- */
+function hourNow(){ const d = new Date(); return d.getHours() + d.getMinutes()/60; }
+function darkness(){ // 0 by day; dusk settles at 0.5 (18:00–20:00); night is 1 (21:00–6:00); the ramps in between take an hour or two
+  const h = hourNow();
+  if (h >= 21 || h < 6) return 1;
+  if (h >= 20) return 0.5 + (h - 20) / 2;
+  if (h >= 18) return 0.5;
+  if (h >= 17) return (h - 17) / 2;
+  if (h < 8) return 1 - (h - 6) / 2;
+  return 0;
+}
+const evening = () => darkness() > 0.35;
+const lamp = { on: darkness() > 0.35, trip: false, glow: darkness() > 0.35 ? 1 : 0 };   // when the page opens in the evening the lamp is already on
+const candle = { lit: darkness() > 0.35 };                                             // only she lights it or puts it out
+function sunGlow(){ // the orange-pink of a sunset (around 17:30) and a sunrise (around 7:00) in the sky outside: 0..1
+  const h = hourNow(), peak = (c, w) => Math.max(0, 1 - Math.abs(h - c) / w);
+  return Math.max(peak(17.6, 0.9), peak(7.0, 1.1));
+}
+const mood = { dark: darkness(), glow: sunGlow(), candle: darkness() > 0.35 ? 1 : 0, last: 0 };          // what is drawn: eases slowly toward the clock, so nothing ever snaps
+function moodTick(now){
+  const dt = Math.min(100, now - (mood.last || now)); mood.last = now;
+  const k = 1 - Math.exp(-dt / 12000);                                                  // ~12 s time constant: a jump takes about half a minute to settle
+  mood.dark += (darkness() - mood.dark) * k;
+  mood.glow += (sunGlow() - mood.glow) * k;
+  mood.candle += ((candle.lit ? 1 : 0) - mood.candle) * (1 - Math.exp(-dt / (candle.lit ? 2500 : 700)));   // the flame takes a few seconds to catch; blown out, it is gone in a moment
+  lamp.glow += ((lamp.on ? 1 : 0) - lamp.glow) * (1 - Math.exp(-dt / 1800));             // the lamp warms up and fades down
+}   // the cat's cushion, in front of the armchair just off the rug
+const LEAFR = i => i === 1 ? 6 : 4;                      // how far the leaves reach beyond the pot
+const OBST = [
+  { x0: 0, y0: TTPOS.y, x1: TTPOS.x+36, y1: TTPOS.y+30, pad: 10 },                 // record player table (closed off to the wall)
+  { x0: CHAIRPOS.x-6, y0: CHAIRPOS.y-4, x1: CHAIRPOS.x+28, y1: CHAIRPOS.y+26, pad: 10 }, // armchair
+  { x0: LAMP.x-2, y0: LAMP.y-2, x1: LAMP.x+6, y1: LAMP.y+6, pad: 8 },                       // floor lamp
+  { x0: CATPOS.x, y0: CATPOS.y, x1: CATPOS.x+CATPOS.w, y1: CATPOS.y+CATPOS.d, pad: 8 },      // the cat's cushion
+  ...PLANTS.map(([x,y],i) => ({ x0: x-LEAFR(i), y0: y-LEAFR(i), x1: x+10+LEAFR(i), y1: y+10+LEAFR(i), pad: 10 })), // pot + leaves + body width
+  { x0: 0, y0: 0, x1: 180, y1: CAB.y+CAB.d, pad: 8 },                               // cabinet + back wall
+];
+const AREA = { x0: 8, y0: 30, x1: 172, y1: 166 };
+let avoid = null;                                                                     // the other person, while a path is being planned: {x, y, r}
+function blocked(x, y){
+  if (x < AREA.x0 || x > AREA.x1 || y < AREA.y0 || y > AREA.y1) return true;
+  if (avoid && Math.hypot(x - avoid.x, y - avoid.y) < avoid.r) return true;
+  if (OBST.some(o => x > o.x0-o.pad && x < o.x1+o.pad && y > o.y0-o.pad && y < o.y1+o.pad)) return true;
+  return false;
+}
+function snap(p){ // nearest free grid node to a point
+  const gx = Math.round(p.x/STEP), gy = Math.round(p.y/STEP);
+  for (let r = 0; r < 12; r++) for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) {
+    if (Math.max(Math.abs(dx),Math.abs(dy)) !== r) continue;
+    if (!blocked((gx+dx)*STEP, (gy+dy)*STEP)) return [gx+dx, gy+dy];
+  }
+  return [gx, gy];
+}
+function findPath(from, to){
+  // 4-direction A* where each change of direction costs extra, so the result is a few long straight legs
+  const TURN = 6, start = snap(from), goal = snap(to);
+  const key = (x,y,d) => x+','+y+','+d, DIRS = [[1,0],[-1,0],[0,1],[0,-1]];
+  const h = (x,y) => Math.abs(x-goal[0]) + Math.abs(y-goal[1]);
+  const open = [{ x: start[0], y: start[1], d: -1, g: 0, f: h(start[0],start[1]) }], came = {}, best = {}, closed = {};
+  while (open.length) {
+    open.sort((a,b) => a.f-b.f); const c = open.shift(); const ck = key(c.x,c.y,c.d);
+    if (closed[ck]) continue; closed[ck] = true;
+    if (c.x === goal[0] && c.y === goal[1]) {
+      const path = []; let k = ck;
+      while (k) { const [x,y] = k.split(',').map(Number); path.push({ x: x*STEP, y: y*STEP }); k = came[k]; }
+      return path.reverse();
+    }
+    DIRS.forEach(([dx,dy], di) => {
+      const nx = c.x+dx, ny = c.y+dy;
+      if (blocked(nx*STEP, ny*STEP)) return;
+      const g = c.g + 1 + (c.d >= 0 && c.d !== di ? TURN : 0), nk = key(nx,ny,di);
+      if (best[nk] !== undefined && g >= best[nk]) return;
+      best[nk] = g; came[nk] = ck; open.push({ x: nx, y: ny, d: di, g, f: g + h(nx,ny) });
+    });
+  }
+  return [from, to];
+}
+function simplify(path){ // drop points on straight runs so he walks in clean legs
+  const out = [path[0]];
+  for (let i = 1; i < path.length-1; i++) {
+    const a = out[out.length-1], b = path[i], c = path[i+1];
+    if ((b.x-a.x)*(c.y-b.y) !== (b.y-a.y)*(c.x-b.x)) out.push(b);
+  }
+  out.push(path[path.length-1]); return out;
+}
+function walkTo(from, to){
+  const pts = simplify(findPath(from, to)); pts[0] = from;
+  if (!blocked(to.x, to.y)) pts[pts.length-1] = to;            // a target inside an obstacle's margin ends at the nearest free spot instead
+  const steps = [];
+  for (let i = 1; i < pts.length; i++) {
+    const d = Math.hypot(pts[i].x-pts[i-1].x, pts[i].y-pts[i-1].y);
+    if (d > 0.5) steps.push(go(pts[i-1], pts[i], d / WALK_SPEED));
+  }
+  return steps;
+}
+
+const POS = {
+  stand: { x: CHAIRPOS.x+11, y: CHAIRPOS.y+26+12 },   // on the rug in front of the armchair
+  tt:    { x: TTPOS.x+18, y: TTPOS.y+30+10 },          // in front of the record player
+};
+const shelfPosFor = i => { // standing spot in front of spine i; moved to the nearest free spot if something (a plant) stands there
+  const s = slotRect(i), p = { x: s.x+2, y: CAB.y+CAB.d+16 };
+  if (!blocked(p.x, p.y)) return p;
+  const [gx, gy] = snap(p); return { x: gx*STEP, y: gy*STEP };
+};
+const busy = () => !!(anim.cur || anim.queue.length);
+
+// legs that take the record off the turntable and put it back in its slot; returns where he ends up
+function returnLegs(from, steps){
+  const a = scene.record, m = scene.man;
+  if (!a) return from;
+  const idx = albums.indexOf(a), shelf = idx >= 0 ? shelfPosFor(idx) : null;
+  steps.push(...walkTo(from, POS.tt));
+  steps.push(wait(400, () => { scene.armDown = false; audioStop(); nowEl.innerHTML = '<span style="color:var(--muted)">Putting the record back…</span>'; }));
+  steps.push(wait(400, () => { scene.record = null; m.hold = a; }));
+  if (shelf) { steps.push(...walkTo(POS.tt, shelf)); steps.push(wait(400, () => { m.hold = null; a.taken = false; })); return shelf; }
+  steps.push(wait(100, () => { m.hold = null; }));
+  return POS.tt;
+}
+function standUp(steps){
+  const m = scene.man;
+  steps.push({ type: 'until', test: () => drinkPhase(scene.t) < 0 });                     // finish the sip first; she may well be in the room, they get out of each other's way
+  steps.push(wait(10, () => { talk.until = 0; }));                                          // if they were chatting, that is over for now
+  steps.push(wait(300, () => { scene.doze = false; }));                       // dozed off? he wakes first
+  steps.push(wait(900, () => {}));                                           // ... and no hurry
+  steps.push(wait(300, () => { m.sitting = false; m.x = POS.stand.x; m.y = POS.stand.y; }));
+  return POS.stand;
+}
+function dozeTick(now){ // late in a long album he dozes off; any action wakes him, and so does the end of the side
+  if (scene.doze) { if (!player.playing && !scene.runout && !busy()) scene.doze = false; return; }
+  if (player.playing && scene.manIn && scene.man.sitting && !busy() && !her.visible && now - scene.playSince > 9*60000 && drinkPhase(now) < 0 && Math.random() < 0.002) scene.doze = true;
+}
+function sitDown(from, steps){ const m = scene.man; steps.push(...walkTo(from, POS.stand)); steps.push(wait(200, () => { m.x = SEAT.x; m.y = SEAT.y; m.sitting = true; m.facing = 1; })); }
+
+function selectAlbum(i){
+  const a = albums[i]; if (!a || busy() || !scene.manIn) return;
+  if (a === scene.record) { if (!player.playing) togglePlayback(); return; } // already on the turntable: just start it again
+  const steps = [];
+  let at = standUp(steps);
+  at = returnLegs(at, steps);                 // the record that is on goes back to its slot first
+  fetchLegs(i, at, steps);
+  sitDown(POS.tt, steps);
+  anim.queue = steps;
+  setStatus(`Putting on "${a.title}"…`);
+}
+function fetchLegs(i, at, steps){ // from `at`: walk to spine i, take it, carry it to the player, put it on and start it; ends at the player
+  const a = albums[i], m = scene.man, shelf = shelfPosFor(i);
+  steps.push(...walkTo(at, shelf));
+  steps.push(wait(500, () => { m.hold = a; a.taken = true; }));
+  steps.push(...walkTo(shelf, POS.tt));
+  steps.push(wait(400, () => { m.hold = null; scene.record = a; }));
+  steps.push(wait(500, () => { scene.armDown = true; playCrackle(3200); startPlayback(a); setStatus(`Putting on "${a.title}"…`); }));
+  return POS.tt;
+}
+/* ---------- volume: moving the slider sends him to the record player; the new level takes effect once he stands there ---------- */
+const volume = { level: 0.8, wanted: 0.8, atPlayer: false, stayUntil: 0, trip: false, due: 0 };
+try { const v = parseFloat(localStorage.getItem('plattenstube.volume')); if (!isNaN(v)) volume.level = volume.wanted = Math.min(1, Math.max(0, v)); } catch (e) {}
+const volSlider = document.getElementById('volslider'), volPct = document.getElementById('volpct'), volHint = document.getElementById('volhint');
+volSlider.value = Math.round(volume.level * 100); volPct.textContent = Math.round(volume.level * 100) + '%';
+function applyVolume(v){
+  volume.level = v;
+  try { localStorage.setItem('plattenstube.volume', String(v)); } catch (e) {}
+  if (sdk.player) sdk.player.setVolume(v).catch(() => {});
+  if (player.audio) player.audio.volume = v;
+}
+const VOL_GRACE = 10000;                                                                              // time you get to keep adjusting
+volSlider.addEventListener('input', () => {
+  volume.wanted = volSlider.value / 100; volPct.textContent = volSlider.value + '%';
+  if (volume.atPlayer) { applyVolume(volume.wanted); volume.stayUntil = scene.t + VOL_GRACE; return; }   // he is at the player: set it right away
+  volume.due = scene.t + VOL_GRACE; volHint.hidden = false; volHint.textContent = 'he will go and set it in a moment…';
+});
+function volumeTick(now){
+  if (!volume.due || now < volume.due || volume.trip || !scene.manIn) return;
+  volume.due = 0; volume.trip = true;
+  const steps = [];
+  standUp(steps);                                                                                     // (after anything already queued, he is back in his chair)
+  steps.push(...walkTo(POS.stand, POS.tt));
+  steps.push(wait(300, () => { scene.man.facing = -1; volume.atPlayer = true; applyVolume(volume.wanted); volume.stayUntil = scene.t + VOL_GRACE; volHint.hidden = true; }));
+  steps.push({ type: 'until', test: () => scene.t > volume.stayUntil });                               // waits there in case you adjust again
+  steps.push(wait(300, () => { volume.atPlayer = false; volume.trip = false; }));
+  sitDown(POS.tt, steps);
+  if (busy()) { volHint.textContent = 'he will set the volume as soon as he is back in his chair…'; anim.queue.push(...steps); }
+  else { volHint.textContent = 'he is on his way to the record player…'; anim.queue = steps; }
+}
+/* ---------- the room fills once you are connected: he walks in, picks a record at random and puts it on ---------- */
+function enterRoom(){
+  if (scene.manIn) return;
+  const m = scene.man, edge = HER_SPOTS.edge;
+  scene.manIn = true; m.sitting = false; m.x = edge.x; m.y = edge.y; m.facing = -1; m.hold = null;
+  const steps = [wait(1500, () => {})];
+  if (albums.length) {
+    const i = Math.floor(Math.random() * albums.length), a = albums[i], shelf = shelfPosFor(i);
+    steps.push(...walkTo(edge, shelf));
+    steps.push(wait(500, () => { m.hold = a; a.taken = true; }));
+    steps.push(...walkTo(shelf, POS.tt));
+    steps.push(wait(400, () => { m.hold = null; scene.record = a; }));
+    steps.push(wait(500, () => { scene.armDown = true; playCrackle(3200); startPlayback(a); }));
+    sitDown(POS.tt, steps);
+    setStatus(`He picks "${a.title}" to start with.`);
+  } else { sitDown(edge, steps); setStatus('The cabinet is empty. Search for an album and add it to the shelf.'); }
+  anim.queue = steps;
+}
+function leaveRoom(){ // logged out: everybody out, nothing on the turntable
+  document.getElementById('disconnect').disabled = false;
+  scene.manIn = false; her.visible = false; her.anim.queue = []; her.anim.cur = null;
+  anim.queue = []; anim.cur = null; scene.record = null; scene.armDown = false; albums.forEach(b => b.taken = false);
+  scene.man.sitting = true; scene.man.x = SEAT.x; scene.man.y = SEAT.y; scene.man.hold = null;
+  nowEl.innerHTML = '<span style="color:var(--muted)">Nothing yet. Pick a record from the cabinet.</span>';
+}
+function lampTick(now){ // once the room looks noticeably dim he gets up and switches the lamp on; in the morning, once it is clearly light, he switches it off
+  if (!scene.manIn || !scene.man.sitting || busy() || lamp.trip) return;                   // independent of her: she takes her own way through the room
+  const want = lamp.on ? mood.dark > 0.12 : mood.dark > 0.3;                              // he goes by how the room actually looks: once it is noticeably dim he switches on, once it is clearly light again he switches off
+  if (want === lamp.on) return;
+  lamp.trip = true;
+  const steps = [];
+  standUp(steps);
+  steps.push(...walkTo(POS.stand, LAMP.standAt));
+  steps.push(wait(700, () => { scene.man.facing = -1; }));
+  steps.push(wait(500, () => { lamp.on = want; }));
+  steps.push(wait(600, () => { lamp.trip = false; }));
+  sitDown(LAMP.standAt, steps);
+  anim.queue = steps;
+  setStatus(want ? 'Getting dark; he switches the lamp on.' : 'Morning; he switches the lamp off.');
+}
+function togglePlayback(){ // tap on the record player or the panel button: walk over, lift or lower the arm, sit back down
+  if (busy()) return;
+  if (!scene.record) { setStatus('Nothing on the turntable. Pick a record from the cabinet.'); return; }
+  const steps = [];
+  standUp(steps);
+  steps.push(...walkTo(POS.stand, POS.tt));
+  if (player.playing) steps.push(wait(400, () => { scene.armDown = false; audioPause(); }));
+  else steps.push(wait(400, () => { scene.armDown = true; playCrackle(2200); audioResume(); }));
+  sitDown(POS.tt, steps);
+  anim.queue = steps;
+  setStatus(player.playing ? 'Lifting the arm…' : 'Lowering the arm…');
+}
+
+const NEAR = 15;                                                                       // closer than this and the two of them would bump into each other
+function otherOf(ent){ return ent === scene.man ? (her.visible ? her : null) : (scene.manIn && !scene.man.sitting ? scene.man : null); }
+function walking(ent){ const q = ent === scene.man ? anim : her.anim; return !!(q.cur && q.cur.type === 'walk' && !q.paused); }
+function replanLeg(ent, q, now, other){ // re-route the current leg from where ent stands around the other person; false if there is no way round
+  const c = q.cur;
+  avoid = { x: other.x, y: other.y, r: NEAR };
+  let legs; try { legs = walkTo({ x: ent.x, y: ent.y }, c.to); } finally { avoid = null; }
+  if (!legs.length) return false;
+  const clear = legs.every(l => Math.hypot(l.to.x - other.x, l.to.y - other.y) >= NEAR - 1);   // a route that still ends on top of the other is no route
+  if (!clear && Math.hypot(c.to.x - other.x, c.to.y - other.y) < NEAR) return false;
+  legs[legs.length-1].fn = c.fn;
+  legs.forEach(l => l.planned = other.x + ',' + other.y);
+  q.cur = legs.shift(); q.start = now; q.queue.unshift(...legs);
+  ent.facing = q.cur.to.x - q.cur.from.x >= 0 ? 1 : -1;
+  return true;
+}
+function runQueue(ent, q, now){ // ent: {x,y,bob,facing}; q: {cur,queue,start}
+  const dt = now - (q.last || now); q.last = now;
+  if (!q.cur && q.queue.length) {
+    q.cur = q.queue.shift(); q.start = now;
+    if (q.cur.type==='walk') {
+      if (Math.hypot(ent.x - q.cur.from.x, ent.y - q.cur.from.y) > 0.5) { // an earlier leg ended somewhere else (a detour round the other person): re-route this one from where ent actually stands
+        const legs = walkTo({ x: ent.x, y: ent.y }, q.cur.to);
+        if (legs.length) { legs[legs.length-1].fn = q.cur.fn; q.cur = legs.shift(); q.queue.unshift(...legs); }
+        else { const fn = q.cur.fn; q.cur = wait(1, fn || (() => {})); }
+      }
+      if (q.cur.type==='walk') ent.facing = q.cur.to.x - q.cur.from.x >= 0 ? 1 : -1;
+    }
+  }
+  if (!q.cur) { ent.bob = 0; return; }
+  const c = q.cur;
+  if (c.type === 'walk') { // keep out of the other person's way: she lets him pass, and whoever meets someone standing still walks around them
+    const o = otherOf(ent);
+    if (o) {
+      const tn = Math.min(1, (now - q.start + 120)/c.dur), nx = lerp(c.from.x, c.to.x, tn), ny = lerp(c.from.y, c.to.y, tn);
+      if (Math.hypot(nx - o.x, ny - o.y) < NEAR) {
+        const yield_ = ent === her && walking(scene.man);                                  // he has right of way while he is on the move
+        if (yield_ || (c.planned === o.x + ',' + o.y) || !replanLeg(ent, q, now, o)) { q.start += dt; q.paused = true; ent.bob = 0; return; }   // nowhere to go: wait a moment
+      }
+    }
+  }
+  q.paused = false;
+  const s = q.cur, t = Math.min(1, (now - q.start)/s.dur);                                // (q.cur may just have been replaced by a detour)
+  if (s.type==='until') { ent.bob = 0; if (s.test()) q.cur = null; return; }
+  if (s.type==='walk') { ent.x = lerp(s.from.x,s.to.x,t); ent.y = lerp(s.from.y,s.to.y,t); ent.bob = Math.abs(Math.sin(now/90))*2; }
+  else ent.bob = 0;
+  if (t >= 1) { if (s.fn) s.fn(); q.cur = null; }
+}
+function stepAnim(now){ runQueue(scene.man, anim, now); }
+
+/* ---------- her: comes in through the door now and then ---------- */
+const her = { x: -14, y: 156, bob: 0, facing: 1, visible: false, hold: null, act: null, crouch: 0, reach: 0, blow: 0, pose: null, anim: { cur: null, queue: [], start: 0 }, next: 50000 + Math.random()*60000, candleNext: 0 };
+const HER_SPOTS = { edge: { x: 172, y: 64 }, cat: { x: 120, y: 160 }, talk: { x: 140, y: 118 }, read: { x: 30, y: 44 }, candle: { x: TTPOS.x+30, y: TTPOS.y+30+10 } }; // she appears at the open right edge of the floor
+const talk = { until: 0, start: 0 };             // the two of them chatting after she brought the tea
+const talking = () => scene.t < talk.until;
+const speaker = () => Math.floor((scene.t - talk.start) / 1700) % 2 === 0 ? 'her' : 'him';   // they take turns
+const herWalkTo = walkTo;
+function herTick(now){
+  if (her.visible) { runQueue(her, her.anim, now); if (!her.anim.cur && !her.anim.queue.length) { her.visible = false; her.act = null; her.next = now + 70000 + Math.random()*110000; } return; }
+  if (!scene.man.sitting || !scene.manIn || busy() || drinkPhase(now) >= 0) return;      // she only comes in while he is settled in his chair
+  const candleDue = (candle.lit ? mood.dark > 0.12 : mood.dark > 0.3) !== candle.lit && now > her.candleNext;   // once the room is noticeably dim (or light again) she comes to see to the candle
+  if (!candleDue && now < her.next) return;
+  const pick = candleDue ? 'candle' : ['cat', 'read', 'talk'][Math.floor(Math.random()*3)];
+  const q = [], d = HER_SPOTS.edge;
+  her.visible = true; her.x = d.x; her.y = d.y; her.facing = -1; her.act = pick; her.hold = null;
+  q.push(wait(2000, () => {}));                                                        // appears at the edge, pauses, then sets off
+  if (pick === 'read') {
+    q.push(...herWalkTo(d, HER_SPOTS.read));
+    q.push(wait(500, () => { her.pose = 'read'; her.x = 26; her.y = CAB.y + CAB.d + 7; }));   // sits down on the floor, back against the left end of the cabinet
+    q.push(wait(25000 + Math.random()*25000, () => {}));                                // reads
+    q.push(wait(500, () => { her.pose = null; her.x = HER_SPOTS.read.x; her.y = HER_SPOTS.read.y; }));
+    q.push(...herWalkTo(HER_SPOTS.read, d));
+  } else if (pick === 'cat') {
+    q.push(...herWalkTo(d, HER_SPOTS.cat));
+    q.push(wait(500, () => { her.facing = -1; her.crouch = 1; catMood.visitor = scene.t + 20000; }));
+    q.push(wait(6000 + Math.random()*4000, () => { her.crouch = 0; }));                 // strokes the cat
+    q.push(wait(400, () => {}));
+    q.push(...herWalkTo(HER_SPOTS.cat, d));
+  } else if (pick === 'candle') { // she lights the candle on the player's table, or puts it out in the morning
+    const want = !candle.lit;
+    q.push(...herWalkTo(d, HER_SPOTS.candle));
+    q.push(wait(900, () => { her.facing = -1; if (want) her.reach = 1; else her.blow = 1; }));   // lighting: reaches over the little table with a match; putting out: leans in and blows
+    q.push(wait(1400, () => { candle.lit = want; setStatus(want ? 'She lights the candle.' : 'She blows the candle out.'); }));
+    q.push({ type: 'until', test: () => want ? mood.candle > 0.9 : mood.candle < 0.02 });   // she watches until the flame has caught, or is really out
+    q.push(wait(900, () => { her.reach = 0; her.blow = 0; her.candleNext = scene.t + 60000; }));
+    q.push(...herWalkTo(HER_SPOTS.candle, d));
+  } else { // she comes over for a chat
+    q.push(...herWalkTo(d, HER_SPOTS.talk));
+    q.push(wait(600, () => { her.facing = -1; talk.start = scene.t; talk.until = scene.t + 10000 + Math.random()*10000; }));
+    q.push({ type: 'until', test: () => !talking() });                                   // they chat for a while
+    q.push(wait(1200, () => {}));
+    q.push(...herWalkTo(HER_SPOTS.talk, d));
+  }
+  q.push(wait(1500, () => { her.facing = 1; }));                                        // a moment at the edge, then she is gone
+  her.anim.queue = q;
+}
+
+/* ---------- rain on the window (plane x=0, y 72..118, z 62..103) ---------- */
+const WIN = { y0:72, y1:118, z0:62, z1:103 };
+const rain = { falling: [], sliding: [], lastT: 0 };
+function updateRain(now){
+  const dt = Math.min(50, now - (rain.lastT || now)); rain.lastT = now;
+  // streaks falling outside, slightly slanted
+  if (Math.random() < dt/14) rain.falling.push({ y: WIN.y0 + Math.random()*(WIN.y1-WIN.y0), z: WIN.z1 + 4, v: 0.09 + Math.random()*0.05, len: 3 + Math.random()*4 });
+  for (const d of rain.falling) { d.z -= d.v*dt; d.y += d.v*dt*0.12; }
+  rain.falling = rain.falling.filter(d => d.z > WIN.z0 - 2);
+  // drops hitting the glass: splash, then slide down with a trail
+  if (Math.random() < dt/220) rain.sliding.push({ y: WIN.y0 + 2 + Math.random()*(WIN.y1-WIN.y0-4), z: WIN.z0 + 6 + Math.random()*(WIN.z1-WIN.z0-8), age: 0, v: 0.006 + Math.random()*0.012, trail: [], wob: Math.random()*6.28 });
+  for (const d of rain.sliding) {
+    d.age += dt;
+    if (d.age > 350) { // after the splash it starts sliding, speeding up, wobbling sideways
+      d.v = Math.min(0.045, d.v + dt*0.00002);
+      d.z -= d.v*dt;
+      d.trail.push({ y: d.y, z: d.z, life: 1 });
+    }
+    for (const t of d.trail) t.life -= dt/900;
+    d.trail = d.trail.filter(t => t.life > 0);
+    if (d.trail.length > 40) d.trail.shift();
+  }
+  rain.sliding = rain.sliding.filter(d => d.z > WIN.z0 || d.trail.length);
+}
+function px(y, z, w, h, fill){ // one "pixel" rectangle on the window plane
+  const [sx, sy] = P(0, y, z); ctx.fillStyle = fill; ctx.fillRect(Math.round(sx), Math.round(sy), w, h);
+}
+function drawRain(){
+  ctx.save();
+  ctx.beginPath(); const c = [P(0,WIN.y0,WIN.z0),P(0,WIN.y1,WIN.z0),P(0,WIN.y1,WIN.z1),P(0,WIN.y0,WIN.z1)];
+  ctx.moveTo(c[0][0],c[0][1]); c.slice(1).forEach(p => ctx.lineTo(p[0],p[1])); ctx.closePath(); ctx.clip();
+  for (const d of rain.falling) for (let i=0;i<d.len;i++) px(d.y - i*0.12, d.z + i, 1, 1, i ? 'rgba(170,195,220,.35)' : 'rgba(210,228,245,.8)');
+  for (const d of rain.sliding) {
+    for (const t of d.trail) px(t.y, t.z, 1, 1, `rgba(160,190,220,${0.35*t.life})`);
+    if (d.age < 350) { // splash: a small cross that fades
+      const k = 1 - d.age/350;
+      px(d.y, d.z, 2, 2, `rgba(230,240,255,${0.9*k})`);
+      px(d.y-1.5, d.z, 1, 1, `rgba(230,240,255,${0.6*k})`); px(d.y+1.5, d.z, 1, 1, `rgba(230,240,255,${0.6*k})`);
+      px(d.y, d.z+1.5, 1, 1, `rgba(230,240,255,${0.6*k})`);
+    } else if (d.z > WIN.z0) {
+      px(d.y, d.z, 2, 3, 'rgba(225,238,250,.95)'); px(d.y, d.z+1.5, 1, 1, 'rgba(255,255,255,.9)');
+    }
+  }
+  // soft glare on the glass
+  ctx.fillStyle = 'rgba(255,255,255,.05)'; ctx.fillRect(c[3][0]+2, c[3][1]+2, 10, 22);
+  ctx.restore();
+}
+
+
+/* ---------- drawing ---------- */
+/* ---------- framed pictures of him and his friends, on the left wall between the cabinet and the window ---------- */
+function drawRoom(){
+  ctx.fillStyle = '#17110d'; ctx.fillRect(0,0,W,H);
+  // walls
+  const WH = 130;
+  poly([P(0,0,0),P(0,170,0),P(0,170,WH),P(0,0,WH)], shade(WALL,1));   // left wall (x=0)
+  poly([P(0,0,0),P(180,0,0),P(180,0,WH),P(0,0,WH)], shade(WALL2,1));  // right wall (y=0)
+  // wallpaper stripes
+  ctx.fillStyle = 'rgba(0,0,0,.08)';
+  for (let y=10;y<170;y+=14) poly([P(0,y,0),P(0,y+5,0),P(0,y+5,WH),P(0,y,WH)],'rgba(0,0,0,.08)');
+  for (let x=10;x<180;x+=14) poly([P(x,0,0),P(x+5,0,0),P(x+5,0,WH),P(x,0,WH)],'rgba(0,0,0,.08)');
+  // skirting
+  poly([P(0,0,0),P(0,170,0),P(0,170,6),P(0,0,6)], shade(WOODD,.9));
+  poly([P(0,0,0),P(180,0,0),P(180,0,6),P(0,0,6)], shade(WOODD,.75));
+  // window on left wall
+  poly([P(0,70,60),P(0,120,60),P(0,120,105),P(0,70,105)], '#2c3540');
+  { const k = mood.dark, g = mood.glow, day = [74,94,115], dusk = [44,62,112], night = [14,16,26];   // grey afternoon -> blue dusk -> black night (eased)
+    const base = k < 0.5 ? day.map((v,i) => v + (dusk[i]-v) * k*2) : dusk.map((v,i) => v + (night[i]-v) * (k-0.5)*2);
+    const col = c => `rgb(${c.map(v=>v|0).join(',')})`;
+    poly([P(0,72,62),P(0,118,62),P(0,118,103),P(0,72,103)], col(base));
+    if (g > 0.01) { // sunset / sunrise: the sky goes orange low down and pink higher up, over the grey-blue
+      const top = [214,118,142], bottom = [238,146,78], mix = (a, b, t) => a.map((v,i) => v + (b[i]-v)*t);
+      const bands = 6;
+      for (let i = 0; i < bands; i++) { const z0 = 62 + (103-62)*i/bands, z1 = 62 + (103-62)*(i+1)/bands, t = 1 - i/(bands-1);
+        const c = mix(base, mix(top, bottom, t), g * (0.55 + 0.35*t));
+        poly([P(0,72,z0),P(0,118,z0),P(0,118,z1),P(0,72,z1)], col(c)); } } }
+  drawRain();
+  poly([P(0,94,62),P(0,97,62),P(0,97,103),P(0,94,103)], '#2c3540');
+  poly([P(0,72,82),P(0,118,82),P(0,118,84),P(0,72,84)], '#2c3540');
+  // floor planks
+  for (let x=0;x<180;x+=12) poly([P(x,0,0),P(x+12,0,0),P(x+12,170,0),P(x,170,0)], shade((x/12)%2?FLOOR:FLOOR2,1));
+  // rug
+  poly([P(50,80,0),P(150,80,0),P(150,150,0),P(50,150,0)], '#7a3e3a');
+  poly([P(56,86,0),P(144,86,0),P(144,144,0),P(56,144,0)], '#a85c4a');
+  poly([P(66,96,0),P(134,96,0),P(134,134,0),P(66,134,0)], '#7a3e3a');
+}
+
+function drawCabinet(){
+  const {x,y,w,d,h} = CAB;
+  box(x,y,0,w,d,h, WOOD);
+  // cubbies on the front face (plane y = y+d)
+  for (let c=0;c<COLS*ROWS;c++){
+    const r = cubbyRect(c), fy = r.y;
+    poly([P(r.x,fy,r.z),P(r.x+CUB.w,fy,r.z),P(r.x+CUB.w,fy,r.z+CUB.h),P(r.x,fy,r.z+CUB.h)], shade(WOODD,.5));
+    // shelf board edge at the bottom of the cubby
+    poly([P(r.x,fy,r.z),P(r.x+CUB.w,fy,r.z),P(r.x+CUB.w,fy,r.z+1),P(r.x,fy,r.z+1)], shade(WOOD,.9));
+  }
+  // record spines standing in the cubbies
+  for (let i=0;i<albums.length;i++){
+    const a = albums[i]; if (a.taken) continue;
+    coverImage(a);
+    const s = slotRect(i), fy = s.y, out = (a === hover) ? 3 : 0; // hovered spine is pulled forward
+    const yy = fy + out, z0 = s.z, z1 = s.z + s.h;
+    const col = a.color || fallbackColor(a.id);
+    // top edge (slightly lit) and front of the spine
+    if (out) poly([P(s.x,fy,z1),P(s.x+s.w,fy,z1),P(s.x+s.w,yy,z1),P(s.x,yy,z1)], 'rgba(255,255,255,.5)');
+    poly([P(s.x,yy,z0),P(s.x+s.w,yy,z0),P(s.x+s.w,yy,z1),P(s.x,yy,z1)], col);
+    ctx.fillStyle = 'rgba(0,0,0,.25)'; // dark edge left
+    poly([P(s.x,yy,z0),P(s.x+0.6,yy,z0),P(s.x+0.6,yy,z1),P(s.x,yy,z1)], 'rgba(0,0,0,.3)');
+    poly([P(s.x+s.w-0.6,yy,z0),P(s.x+s.w,yy,z0),P(s.x+s.w,yy,z1),P(s.x+s.w-0.6,yy,z1)], 'rgba(255,255,255,.18)');
+    // label band + text ticks
+    const lz = z0 + s.h*0.55;
+    poly([P(s.x+0.6,yy,lz),P(s.x+s.w-0.6,yy,lz),P(s.x+s.w-0.6,yy,lz+5),P(s.x+0.6,yy,lz+5)], 'rgba(241,228,200,.85)');
+    poly([P(s.x+1,yy,lz+2),P(s.x+s.w-1,yy,lz+2),P(s.x+s.w-1,yy,lz+3),P(s.x+1,yy,lz+3)], 'rgba(0,0,0,.5)');
+    if (a === hover) poly([P(s.x-1,yy,z0-1),P(s.x+s.w+1,yy,z0-1),P(s.x+s.w+1,yy,z1+1),P(s.x-1,yy,z1+1)], 'rgba(229,162,74,.3)');
+  }
+  // top trim; on top of the cabinet: a tiny plant, a stack of books and a small table lamp
+  box(x-2,y-2,h,w+4,d+4,3, WOOD, {top:1.1});
+  box(x+20,y+8,h+3,8,8,6,POT); box(x+22,y+10,h+9,4,4,8,LEAF); box(x+19,y+9,h+13,5,5,3,LEAF2);
+  { // books lying flat, each a little offset, pages showing on the near sides
+    const books = [[14,10,2.6,[146,62,52]],[13,9.5,2.2,[58,84,112]],[12,10,2.8,[196,160,84]],[11,9,2,[74,98,70]]];
+    let z = h+3, bx = x+98, by = y+6;
+    books.forEach(([bw,bd,bh,col],i) => { const ox = bx + (i%2)*1.5, oy = by + (i===1?1:i===3?-0.5:0);
+      box(ox,oy,z,bw,bd,bh,col,{top:1.05});                                  // cover
+      box(ox+0.5,oy+bd-0.6,z+0.4,bw-1,0.6,bh-0.8,[232,222,196]);             // pages, front
+      box(ox+bw-0.6,oy+0.5,z+0.4,0.6,bd-1,bh-0.8,[232,222,196]);             // pages, side
+      z += bh; });
+    box(bx+7,by+5,z,2,2,0.5,[120,100,70]);                                   // a bookmark ribbon end on top
+  }
+  { // small table lamp at the right end, lit together with the floor lamp
+    const lx = x+118, ly = y+8, gl = lamp.glow, mix = (a, b) => a.map((v, i) => v + (b[i] - v) * gl);
+    box(lx+2,ly+2,h+3,6,6,1.4,[62,48,36]);                                   // foot
+    box(lx+4.2,ly+4.2,h+4.4,1.6,1.6,9,[86,70,52]);                           // stem
+    box(lx,ly,h+13,10,10,1,mix([140,118,84],[214,170,96]),{top:1.0});       // shade rim
+    box(lx+0.5,ly+0.5,h+14,9,9,6,mix([160,136,96],[236,196,120]),{top:0.95}); // shade
+    box(lx+1.5,ly+1.5,h+20,7,7,1,mix([140,118,84],[214,170,96]),{top:1.0});
+    if (gl > 0.02) { const [sx, sy] = P(lx+5, ly+5, h+13); const g = ctx.createRadialGradient(sx, sy, 1, sx, sy, 16); g.addColorStop(0, `rgba(255,220,150,${0.5*gl})`); g.addColorStop(1, 'rgba(255,220,150,0)'); ctx.fillStyle = g; ctx.fillRect(sx-16, sy-16, 32, 32); }
+  }
+}
+
+function drawPlant(x,y,big){
+  box(x,y,0,10,10,10,POT,{top:1.1});
+  box(x+3,y+3,10,4,4,big?22:14,[70,110,50]);
+  const leaves = big ? [[-5,2,26],[6,-3,22],[2,7,20],[-4,-4,16],[7,5,14]] : [[-4,2,16],[5,-2,14],[1,6,12]];
+  for (const [dx,dy,dz] of leaves) box(x+3+dx,y+3+dy,dz,6,6,3, dz%2?LEAF:LEAF2);
+}
+
+function drawLamp(){ // floor lamp: base, thin pole, warm shade; glows when on
+  const {x, y} = LAMP;
+  ellipse(x+2, y+2, 0.4, 5, 'rgba(0,0,0,.25)');
+  box(x-1, y-1, 0, 6, 6, 1.6, [62,48,36]);                                   // base
+  box(x+1.2, y+1.2, 1.6, 1.6, 1.6, 40, [86,70,52]);                           // pole
+  const gl = lamp.glow, mix = (a, b) => a.map((v, i) => v + (b[i] - v) * gl);
+  const SH = mix([160,136,96], [236,196,120]), SH2 = mix([140,118,84], [214,170,96]);
+  box(x-3, y-3, 41, 10, 10, 1.2, SH2, {top:1.0});                             // shade, bottom rim
+  box(x-2.5, y-2.5, 42.2, 9, 9, 7, SH, {top:0.95});                           // shade
+  box(x-1.5, y-1.5, 49.2, 7, 7, 1.2, SH2, {top:1.0});                         // shade, top rim
+  if (gl > 0.02) { const [sx, sy] = P(x+2, y+2, 41); const g = ctx.createRadialGradient(sx, sy, 1, sx, sy, 14); g.addColorStop(0, `rgba(255,220,150,${0.55*gl})`); g.addColorStop(1, 'rgba(255,220,150,0)'); ctx.fillStyle = g; ctx.fillRect(sx-14, sy-14, 28, 28); }
+}
+function drawCandle(){ // on the front edge of the record player's table, lit in the evening
+  const {x, y} = TTPOS, cx = x+30, cy = y+25.8;                               // on the strip of table top in front of the plinth
+  box(cx-1, cy-0.6, 22, 4, 2.4, 0.6, [150,130,96]);                           // small dish
+  box(cx, cy, 22.6, 2.4, 1.6, 6, [238,228,200]);                              // candle
+  box(cx+1, cy+0.6, 28.6, 0.5, 0.5, 0.7, [40,30,20]);                         // wick
+  const lit = mood.candle;
+  if (lit > 0.03) {
+    const f = (0.75 + Math.sin(scene.t/70) * 0.15 + Math.sin(scene.t/23) * 0.1) * lit; // flicker, scaled by how lit it is
+    box(cx+0.5, cy+0.2, 29.2, 1.5, 1.2, 2.6*f, [255,200,90]);
+    box(cx+0.9, cy+0.5, 29.2, 0.7, 0.6, 1.8*f, [255,250,220]);
+    const [sx, sy] = P(cx+1.2, cy+0.8, 30.5); const g = ctx.createRadialGradient(sx, sy, 0.5, sx, sy, 12*f + 0.5); g.addColorStop(0, `rgba(255,200,110,${0.6*lit})`); g.addColorStop(1, 'rgba(255,200,110,0)'); ctx.fillStyle = g; ctx.fillRect(sx-13, sy-13, 26, 26);
+  }
+}
+function drawTurntable(){
+  const {x,y} = TTPOS;
+  box(x,y,0,36,30,22,TABLE);           // side table, deeper at the front for the candle
+  if (scene.record) { // the sleeve leans against the front of the table while a record is on
+    const a = scene.record, img = coverImage(a), [sx, sy] = P(x+5, y+30.6, 15);   // top edge rests against the table, the bottom stands a little way out on the floor
+    ctx.save(); ctx.transform(1, 0.5, -0.22, 1.08, sx, sy);                               // leaning back slightly rather than standing bolt upright
+    ctx.fillStyle = '#1a1410'; ctx.fillRect(-0.6, -0.6, 15.2, 15.2);
+    if (img.complete && img.naturalWidth) { try { ctx.drawImage(img, 0, 0, 14, 14); } catch (e) { ctx.fillStyle = a.color || '#888'; ctx.fillRect(0, 0, 14, 14); } }
+    else { ctx.fillStyle = a.color || '#888'; ctx.fillRect(0, 0, 14, 14); }
+    ctx.restore();
+  }
+  box(x+2,y+2,22,32,22,5,TT,{top:1});  // plinth
+  ellipse(x+15,y+13,27,11,shade(PLATTER,1));
+  ellipse(x+15,y+13,27.5,10,'#2a2a2e');
+  if (scene.record) {
+    const a = scene.record;
+    ellipse(x+15,y+13,28,10,'#151515');
+    // grooves + spinning mark
+    ellipse(x+15,y+13,28,3.5,a.color||'#c0392b');
+    const [cx,cy] = P(x+15,y+13,28);
+    const ang = scene.angle;
+    ctx.fillStyle='rgba(255,255,255,.35)';
+    ctx.fillRect(cx+Math.cos(ang)*7-1, cy+Math.sin(ang)*3.5-1, 2, 2);
+    ctx.fillStyle='#000'; ctx.fillRect(cx-1,cy-1,2,1);
+  }
+  // tonearm
+  const [ax,ay] = P(x+30,y+3,29);
+  ctx.fillStyle='#d8d8d8';
+  if (scene.armDown) { const [bx,by]=P(x+22,y+10,29); ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.strokeStyle='#d8d8d8'; ctx.lineWidth=1.5; ctx.stroke(); ctx.fillRect(bx-1,by-1,3,2); }
+  else { const [bx,by]=P(x+30,y+14,29); ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.strokeStyle='#d8d8d8'; ctx.lineWidth=1.5; ctx.stroke(); }
+  ctx.fillRect(ax-1,ay-2,3,3);
+  // knob
+  box(x+4,y+18,27,3,3,1,[60,60,60]);
+  drawCandle();                        // on the table edge in front of the plinth, drawn last so it is not covered
+}
+
+const CUSH = [158,80,64], CHAIRDARK = [104,48,40];
+/* ---------- the cat: sleeps on her cushion; lifts her head when he is up and about ---------- */
+function drawCushion(){
+  const {x, y, w, d} = CATPOS, KNIT = [150,148,150], KNIT2 = [132,130,134];
+  box(x, y, 0, w, d, 4, KNIT, {top:1.0});
+  for (let k = 1; k < w; k += 2) box(x+k, y+d-0.3, 0.5, 0.8, 0.3, 3, KNIT2);             // ribbing on the front
+  for (let k = 1; k < w; k += 2) box(x+k, y+0.5, 4, 0.8, d-1, 0.3, KNIT2);               // ribbing on top
+}
+function drawCatBody(x, y, z, awake){ // calico, curled up; origin = back-left corner of her body footprint (about 19 x 13)
+  const t = scene.t, breath = Math.sin(t / 1900) * 0.35;
+  const tight = scene.doze ? 0.9 : 1;                                                   // curls up tighter when he dozes off
+  if (tight !== 1) { const [sx, sy] = P(x+10, y+6, z); ctx.save(); ctx.translate(sx, sy); ctx.scale(tight, tight); ctx.translate(-sx, -sy); }
+  const WHITE = [240,236,228], ORANGE = [208,128,62], DARK = [52,42,36], TABBY = [96,78,56];
+  box(x+5, y+2, z, 12, 9, 4+breath, WHITE);
+  box(x+6.5, y+1, z+1, 9.5, 11, 3.5+breath, WHITE);
+  box(x+9, y+2, z+0.5, 8, 5.5, 4.6+breath, ORANGE);
+  box(x+6, y+6, z+0.5, 5.5, 4.5, 3.8+breath, ORANGE);
+  box(x+12.5, y+7.5, z+0.5, 4, 3.8, 3.4+breath, DARK);
+  box(x+11.5, y+1.5, z+2, 3, 2.5, 2.9+breath, DARK);
+  box(x+8, y+4, z+3.6+breath, 3, 2, 1.1, DARK);
+  box(x+15, y+2, z, 3, 9, 2, WHITE);                                                    // tail tucked along the side
+  box(x+16, y+4, z+1.2, 1.8, 4, 1.2, ORANGE);
+  box(x+6, y+10.6, z, 3, 2, 1.8, WHITE); box(x+9.5, y+10.6, z, 3, 2, 1.8, WHITE);        // front paws
+  const hz = z + 1.4 + (awake ? 2.6 : 0), hy = y + 5.5 + (awake ? -0.6 : 0);
+  box(x+2, hy, hz, 6.5, 6.5, 4.4, TABBY);                                               // tabby head
+  box(x+2, hy+6, hz, 6.5, 0.6, 2, WHITE);                                               // white muzzle
+  box(x+4.4, hy+6.1, hz+1.6, 1.7, 0.6, 0.6, [214,150,150]);                             // nose
+  box(x+2.4, hy+0.5, hz+4.4, 1.8, 1.8, 1.6 + (t % 9000 < 220 ? 0.7 : 0), DARK);          // ears (one twitches now and then)
+  box(x+6.3, hy+0.5, hz+4.4, 1.8, 1.8, 1.6, DARK);
+  if (awake) { box(x+3, hy+6.1, hz+2.8, 1.2, 0.5, 0.8, [70,120,80]); box(x+6.3, hy+6.1, hz+2.8, 1.2, 0.5, 0.8, [70,120,80]); } // eyes open
+  else { box(x+3, hy+6.1, hz+3.1, 1.2, 0.5, 0.25, DARK); box(x+6.3, hy+6.1, hz+3.1, 1.2, 0.5, 0.25, DARK); }                  // eyes closed
+  box(x+2.6, hy+2.5, hz+4.3, 0.7, 3, 0.4, DARK); box(x+7.2, hy+2.5, hz+4.3, 0.7, 3, 0.4, DARK);                          // tabby stripes
+  if (tight !== 1) ctx.restore();
+}
+const catMood = { satAt: -1, doze: 7000 };                 // she watches him sit down, then takes 5–9 s to doze off again
+function catAwake(){
+  const m = scene.man, t = scene.t;
+  let awake;
+  if (catMood.visitor && t < catMood.visitor) { catMood.satAt = -1; awake = true; }   // she is stroking her
+  else if (!m.sitting) { catMood.satAt = -1; awake = true; }
+  else { if (catMood.satAt < 0) { catMood.satAt = t; catMood.doze = 5000 + Math.random()*4000; } awake = t - catMood.satAt < catMood.doze; }
+  return awake;
+}
+function drawCat(){ drawCushion(); drawCatBody(CATPOS.x, CATPOS.y, 4, catAwake()); }
+function drawChair(){ // everything that sits behind the person: plinth, base, cushions, backrest, far arm
+  const {x,y} = CHAIRPOS;
+  box(x-6,y-4,0,34,30,3,CHAIRDARK);          // plinth
+  box(x-6,y-4,3,34,30,6,CHAIR);              // base
+  box(x-1,y+2,9,24,24,2,CUSH,{top:1.0});     // seat cushion between the arms
+  box(x-6,y-4,9,34,6,22,CHAIR,{top:1.05});   // backrest, full width, far side
+  box(x-1,y+2,9,24,2,14,CUSH,{front:0.9});   // back cushion
+  box(x-6,y+2,9,5,24,8,CHAIR);               // far arm
+}
+function drawHerReading(x, y, t){ // sitting on the floor with her back to the left end of the cabinet, knees up, book on her lap
+  const HAIR = [196,160,104], HAIR2 = [172,138,86], SWEAT = [236,230,218], SWEAT2 = [214,206,192], TROU = [34,32,36], SOCK = [118,118,122], SHOE = [172,132,88];
+  const bx = her.x - 5, by = CAB.y + CAB.d + 0.5;               // seat against the cabinet front
+  box(bx-1,by,0,13,9,4,TROU);                                               // seat
+  box(bx+1,by+8,4,4,6,4,TROU); box(bx+6.5,by+8,4,4,6,4,TROU);             // thighs, knees drawn up toward the room
+  box(bx+1,by+12,0,4,4,9,TROU); box(bx+6.5,by+12,0,4,4,9,TROU);           // shins
+  box(bx+1,by+12,0,4,4,1.6,SOCK); box(bx+6.5,by+12,0,4,4,1.6,SOCK);       // socks
+  box(bx+1,by+12,0,4,5,2.4,SHOE); box(bx+6.5,by+12,0,4,5,2.4,SHOE);       // sneakers flat on the floor
+  const breath = Math.sin(t / 2000) * 0.4;
+  box(bx,by,4,11,9,13+breath,SWEAT);                                        // torso leaning on the cabinet
+  poly([P(bx+1,by+9,11),P(bx+10,by+9,11),P(bx+10,by+9,15),P(bx+5.5,by+11,13.5),P(bx+1,by+9,15)], shade(SWEAT,0.93));
+  box(bx-2,by+2,8,3,5,8,SWEAT2); box(bx+10,by+2,8,3,5,8,SWEAT2);           // upper arms down the sides
+  box(bx-1,by+6,8,3,6,3,SWEAT2); box(bx+9,by+6,8,3,6,3,SWEAT2);            // forearms forward to the book
+  box(bx-0.5,by+10.5,8,3,3,3,[232,196,164]); box(bx+8.5,by+10.5,8,3,3,3,[232,196,164]); // hands either side of the book
+  const flip = (t % 6000) < 220 ? 1 : 0;                                    // a page turning now and then
+  box(bx+2.2,by+9,8.4,6.6,4.8,0.9,[88,52,40]);                               // book lying open on her knees, cover underneath
+  box(bx+2.5,by+9.3,9.3,6,4.2,0.5,[244,238,222]);                            // the two open pages, seen from above
+  box(bx+5.35,by+9.3,9.8,0.3,4.2,0.25,[196,186,166]);                        // the fold in the middle
+  if (flip) box(bx+5.3,by+9.4,9.8,0.4,4,3.2,[252,248,236]);                  // a page standing up as she turns it
+  const hx = bx + 1, hy = by, hz = 17 + breath;
+  box(hx-1.5,hy-1.5,hz-6,12,7,15,HAIR2);                                    // hair down the back and sides
+  box(hx,hy,hz,9,9,9,[232,196,164]);                                        // face
+  box(hx-1,hy-1,hz+8,11,11,2.5,HAIR,{top:1.05});
+  box(hx-1,hy+8,hz+5.5,2.5,2.5,4.5,HAIR); box(hx+7.5,hy+8,hz+5.5,2.5,2.5,4.5,HAIR);
+  box(hx+2,hy+8.6,hz+3.6,1.4,0.6,0.5,[82,138,92]); box(hx+5.6,hy+8.6,hz+3.6,1.4,0.6,0.5,[82,138,92]); // eyes lowered to the page
+  box(hx+3,hy+8.6,hz+2,3,0.6,0.7,[196,120,110]);                            // smile
+}
+function drawHer(){
+  if (!her.visible) return;
+  const x = her.x-6, y = her.y-6, z = her.bob, t = scene.t;
+  const HAIR = [196,160,104], HAIR2 = [172,138,86], SWEAT = [236,230,218], SWEAT2 = [214,206,192], TROU = [34,32,36], SOCK = [118,118,122], SHOE = [172,132,88];
+  if (her.pose === 'read') { drawHerReading(x, y, t); return; }
+  const cr = her.crouch;                                        // 1 = crouching down to the cat
+  const legH = 10 - 4*cr, torsoZ = z + legH;
+  box(x+2.5,y+2,z+3,3.6,8,legH-3,TROU); box(x+7,y+2,z+3,3.6,8,legH-3,TROU); // wide black trousers
+  box(x+2.5,y+7,z+2,3.6,4,1.5,SOCK); box(x+7,y+7,z+2,3.6,4,1.5,SOCK);     // grey wool socks
+  box(x+2.5,y+8,0,3.6,4,2.4,SHOE); box(x+7,y+8,0,3.6,4,2.4,SHOE);          // tan suede sneakers
+  if (!cr) box(x-1.5,y+3,torsoZ+2,3,6,13,SWEAT2);                        // far arm (hanging)
+  else { // far arm reaching out and down to the cat on her left, behind her body, hand stroking back and forth on the fur
+    const stroke = Math.sin(t / 420) * 1.5;
+    box(x-2,y+3,torsoZ+6,3,5,9,SWEAT2);                                   // upper arm, down the far side
+    box(x-9,y+3.5+stroke*0.3,torsoZ+2,9,4,3,SWEAT2);                     // forearm reaching out toward the cushion
+    box(x-11,y+4+stroke,torsoZ+1.5,3.5,3.5,3,[232,196,164]);             // hand on the cat
+  }
+  box(x+1,y+1,torsoZ,11,11,16,SWEAT);                                    // cream sweatshirt, slim
+  poly([P(x+2,y+12,torsoZ+9),P(x+11,y+12,torsoZ+9),P(x+11,y+12,torsoZ+13),P(x+6.5,y+14,torsoZ+11.5),P(x+2,y+12,torsoZ+13)], shade(SWEAT,0.93)); // slight bust on the front
+  if (her.reach) { // near arm reaching forward over the table to the candle, a match in her hand while she lights it
+    box(x+10,y-6,torsoZ+9.5,3,10,3,SWEAT2); box(x+10.3,y-8.5,torsoZ+9.5,3,3,3,[232,196,164]);
+    if (!candle.lit) { box(x+11,y-11,torsoZ+10,0.6,3,0.6,[120,90,60]); box(x+11,y-11.6,torsoZ+10,0.9,0.9,1.4,[255,200,90]); }
+  }
+  else if (cr) box(x+11.5,y+3,torsoZ+2,3,6,13,SWEAT2);                    // near arm hangs, as when walking
+  else if (her.hold) { box(x+11.5,y+3,torsoZ+4,3,11,3,SWEAT2); box(x+11.5,y+13,torsoZ+3,3,3,3,[232,196,164]); drawMug(x+6,y+12,torsoZ+5, her.hold === 'mug', her.hold === 'mug'); }
+  else box(x+11.5,y+3,torsoZ+2,3,6,13,SWEAT2);                            // near arm hanging
+  // head with long light-brown hair
+  const hx = x+2 + (talking() ? Math.sin(t/900)*0.5 : 0), hy = y+2, hz = torsoZ+16 + (talking() ? Math.abs(Math.sin(t/900))*0.6 : 0); // a soft sway while they chat
+  box(hx-1.5,hy-2,hz-6,12,7,15,HAIR2);                                   // hair at the back and sides, down to the shoulders
+  box(hx,hy,hz,9,9,9,[232,196,164]);                                     // face
+  box(hx-1,hy-1,hz+8,11,11,2.5,HAIR,{top:1.05});                         // top of the hair
+  box(hx-1,hy+8,hz+5.5,2.5,2.5,4.5,HAIR); box(hx+7.5,hy+8,hz+5.5,2.5,2.5,4.5,HAIR); // strands framing the face
+  const eh = (t % 4300) < 120 ? 0.3 : 1.3;
+  box(hx+2,hy+8.6,hz+4.5,1.4,0.6,eh,[82,138,92]); box(hx+5.6,hy+8.6,hz+4.5,1.4,0.6,eh,[82,138,92]); // green eyes
+  const sp = talking() && speaker() === 'her' && (t % 480) < 260;
+  if (her.blow) box(hx+3.6,hy+8.6,hz+1.6,1.8,0.6,1.8,[150,90,86]);           // lips pursed to blow the candle out
+  else box(hx+2.5,hy+8.6,hz+2, talking() ? 4 : 3,0.6, sp ? 1.6 : 0.8,[196,120,110]); // smile, wider and moving while she talks
+}
+function drawChairArm(){ // the near arm, layered in front of whoever sits in the chair, with his mug of tea on it
+  const {x,y} = CHAIRPOS;
+  box(x+23,y+2,9,5,24,8,CHAIR);
+  if (drinkPhase(scene.t) < 0) drawMug(x+23.5, y+14, 17, true, true);  // the mug waits on the armrest unless he is drinking
+}
+const drink = { start: null, next: 20000 + Math.random()*20000 };           // a sip is a state, not a clock: it only starts when he is settled
+function drinkPhase(t){ return drink.start === null ? -1 : Math.min(1, (t - drink.start) / 3600); } // 0..1 during a sip, else -1
+function drinkTick(t){
+  if (drink.start !== null) { if (t - drink.start >= 3600) { drink.start = null; drink.next = t + 30000 + Math.random()*25000; } return; }
+  if (scene.manIn && scene.man.sitting && !busy() && !scene.doze && t >= drink.next) drink.start = t;      // never while a walk is queued, never asleep
+}
+function drawMug(mx, my, mz, steam, full = true){
+  box(mx,my,mz,4,4,4.5,[214,204,184],{top:1.05});          // mug
+  box(mx+1.5,my+4,mz+2,1.2,1.2,2,[214,204,184]);           // handle
+  ellipse(mx+2,my+2,mz+4.5,1.6, full ? '#6b4a2a' : '#8f8676');  // tea, or the empty bottom
+  if (!steam || !full) return;
+  ctx.fillStyle = 'rgba(241,228,200,.55)';
+  for (let i=0;i<2;i++){ const ph=(scene.t/2600 + i/2)%1; const [sx,sy]=P(mx+2,my+2,mz+5+ph*9); ctx.globalAlpha=0.5*(1-ph); ctx.fillRect(Math.round(sx+Math.sin(ph*7+i)*1.5), Math.round(sy), 1, 1); }
+  ctx.globalAlpha = 1;
+}
+function drawMan(){
+  const m = scene.man;
+  const bob = m.bob;
+  if (m.sitting) {
+    const x = m.x, y = m.y, z = 11, t = scene.t;
+    const breath = Math.sin(t / 2100) * 0.45;                              // slow breathing lifts the upper body
+    const sway = player.playing && !scene.doze ? Math.sin(t / 650) * 0.7 : 0; // lazy head sway to the music
+    const crossed = Math.floor(t / 45000) % 2 === 1;                        // crosses and uncrosses his legs every 45 s
+    const dp = drinkPhase(t);                                               // every ~40 s he takes a sip of tea
+    box(x,y-4,z,14,18,7,TROUS);                // thighs on the cushion, back to the back cushion
+    if (crossed) {
+      box(x+1,y+13,4,5,4,7,TROUS); box(x+1,y+15,2,5,5,3,SHOE);            // left leg down
+      box(x+1,y+9,z+7,13,4,3,TROUS);                                       // right shin lying across the left knee
+      box(x-3,y+9,z+6.5,4,4.5,3,SHOE);                                     // its shoe sticking out at the side
+    } else {
+      box(x+1,y+13,4,5,4,7,TROUS); box(x+8,y+13,4,5,4,7,TROUS);           // shins hanging in front of the seat
+      box(x+1,y+15,2,5,5,3,SHOE); box(x+8,y+15,2,5,5,3,SHOE);              // shoes
+    }
+    armSit(x-3, y, z + breath);                // far arm, drawn before the torso
+    box(x,y-6,z+7+breath,14,12,18,CARD);       // torso (knit sweater), leaning on the back cushion
+    for (let k=0;k<3;k++) box(x+2+k*4,y+5.7,z+9+breath,1,0.5,12,CARD2); // knit ribs
+    if (dp < 0) armSit(x+14, y, z + breath);   // near arm resting, drawn after the torso
+    const dz = scene.doze ? -1.2 : 0, dx = scene.doze ? 1.5 : 0;             // dozing: head sinks and tilts to the side
+    head(x+2+sway*0.6+dx,y-4,z+25+breath+Math.abs(sway)*0.4+dz);
+    if (scene.doze) { ctx.fillStyle = '#f1e4c8'; ctx.font = '9px VT323'; for (let i=0;i<2;i++){ const ph=(t/1800 + i/2)%1; const [nx,ny]=P(x+14,y-2,44+ph*16); ctx.globalAlpha=0.9*(1-ph); ctx.fillText('z', nx+ph*5, ny); } ctx.globalAlpha = 1; }
+    if (dp >= 0) {                             // drinking: the near arm carries the mug from the armrest to the mouth and back
+      const rest = [x+19.5, y+2, 17], mouth = [x+6.5, y+10.5, z+22+breath];   // mug rim ends up right at the lips
+      const k = dp < 0.3 ? dp/0.3 : dp < 0.75 ? 1 : 1-(dp-0.75)/0.25;   // 0 = at the armrest, 1 = at the mouth
+      const hx = rest[0]+(mouth[0]-rest[0])*k, hy = rest[1]+(mouth[1]-rest[1])*k, hz = rest[2]+(mouth[2]-rest[2])*k;
+      const zb = z+12+breath + k*((hz-1.5) - (z+12+breath));                 // the elbow end rises to the forearm's height
+      shearBox(x+14,y-4,zb,3,5,(z+25+breath)-zb, -2.5*k, 5*k, CARD2);        // upper arm, hinged at the shoulder, leaning toward the forearm
+      box(Math.min(x+14,hx-1),hy-2.5,hz-1.5,Math.abs(hx-1-(x+14))+3,3,2.5,CARD2); // forearm reaching to the mug
+      box(hx-1,hy-1,hz-1,3,3,3,SKIN);                                       // hand
+      drawMug(hx-1.5,hy-1,hz+1, false, true);
+    }
+  } else {
+    const x = m.x-7, y = m.y-7, z = bob;
+    box(x+2,y+2,z,4,10,10,TROUS); box(x+8,y+2,z,4,10,10,TROUS);   // legs
+    box(x+2,y+9,0,4,4,3,SHOE); box(x+8,y+9,0,4,4,3,SHOE);
+    (m.hold ? armHold : armStand)(x-3, y, z);                      // far arm, behind the torso
+    box(x,y,z+10,14,14,18,CARD);                                   // torso (knit sweater)
+    for (let k=0;k<3;k++) box(x+2+k*4,y+13.7,z+12,1,0.5,12,CARD2); // knit ribs
+    (m.hold ? armHold : armStand)(x+14, y, z);                     // near arm
+    if (m.hold) {
+      // record sleeve held in front
+      const a = m.hold, img = coverImage(a);
+      const [sx,sy] = P(x-1, y+14, z+30);
+      ctx.save(); ctx.transform(1,0.5,0,1,sx,sy);
+      if (img.complete && img.naturalWidth) { try { ctx.drawImage(img,0,0,16,16); } catch(e){ ctx.fillStyle=a.color||'#888'; ctx.fillRect(0,0,16,16);} } else { ctx.fillStyle=a.color||'#888'; ctx.fillRect(0,0,16,16); }
+      ctx.restore();
+      box(x-1,y+13,z+15,3,2,3,SKIN); box(x+12,y+13,z+15,3,2,3,SKIN); // hands holding the sleeve
+    }
+    head(x+2,y+2,z+28);
+  }
+}
+function armSit(ax, y, z){        // upper arm down the side, forearm forward onto the thigh, hand on the knee
+  box(ax,y-4,z+12,3,5,13,CARD2);
+  box(ax,y+1,z+10,3,8,3,CARD2);
+  box(ax,y+8,z+9,3,4,4,SKIN);
+}
+function armHold(ax, y, z){       // upper arm down the side, forearm reaching forward to the sleeve (hands are drawn on the sleeve)
+  box(ax,y+4,z+19,3,5,9,CARD2);
+  box(ax,y+8,z+16,3,7,3,CARD2);
+}
+function armStand(ax, y, z){      // arm hanging down the side
+  box(ax,y+4,z+13,3,6,15,CARD2);
+  box(ax,y+5,z+9,3,4,4,SKIN);
+}
+function head(x,y,z){
+  box(x,y,z,10,10,10,SKIN);                   // head
+  box(x,y+9,z,10,1,3,BEARD);                  // short dark beard on the front
+  box(x+9,y+1,z,1,9,3,BEARD);                 // beard along the jaw (visible side)
+  if (talking()) { const open = speaker() === 'him' && (scene.t % 480) < 260; box(x+2.5,y+9.6,z+1.8,5,0.6, open ? 1.6 : 0.9,[196,120,110]); } // a broad happy smile, moving as he talks
+  else if (whistling() || scene.man.sitting && (d => d > 0.3 && d < 0.75)(drinkPhase(scene.t))) box(x+4,y+9.6,z+1.8,2,1.6,2,[214,160,128]); // pursed lips while whistling or sipping
+  else box(x+3,y+9.5,z+2.2,4,1,0.8,[150,110,100]); // mouth
+  const eh = scene.doze ? 0.35 : (scene.t % 4700) < 130 ? 0.4 : 1.5;       // blink now and then; closed while dozing
+  box(x+2,y+9.6,z+5.5,1.5,0.6,eh,[40,30,28]); box(x+6.5,y+9.6,z+5.5,1.5,0.6,eh,[40,30,28]); // eyes
+  box(x+1,y+9.4,z+8,8,0.6,1,BEARD);           // a bit of dark hair under the cap
+  box(x-0.5,y-0.5,z+9,11,11,2,HAT);           // baseball cap, crown
+  box(x+1.5,y+1.5,z+11,7,7,1,HAT);            // dome
+  box(x-0.5,y+10,z+9,11,4,0.8,HAT);           // curved brim, front only
+  box(x+4,y+10.1,z+9.5,2,0.6,1.2,[96,70,46]); // small dark logo on the front
+}
+let hover = null;
+function draw(){
+  ctx.imageSmoothingEnabled = false;
+  drawRoom();
+  drawCabinet();
+  // things in front, painted back to front by their floor footprints
+  const m = scene.man;
+  const manBox = m.sitting ? { x0: m.x+1, y0: m.y+1, x1: m.x+13, y1: m.y+18 } : { x0: m.x-6, y0: m.y-6, x1: m.x+6, y1: m.y+6 };
+  const items = [
+    { box: { x0: TTPOS.x, y0: TTPOS.y, x1: TTPOS.x+36, y1: TTPOS.y+32 }, f: drawTurntable },
+    { box: { x0: LAMP.x-3, y0: LAMP.y-3, x1: LAMP.x+7, y1: LAMP.y+7 }, f: drawLamp },
+    ...PLANTS.map(([x,y],i) => ({ box: { x0: x-LEAFR(i), y0: y-LEAFR(i), x1: x+10+LEAFR(i), y1: y+10+LEAFR(i) }, f: () => drawPlant(x, y, i === 1), plantFront: i !== 0, plantBack: i === 0 })),
+    { box: { x0: CHAIRPOS.x-6, y0: CHAIRPOS.y-4, x1: CHAIRPOS.x+23, y1: CHAIRPOS.y+26 }, f: drawChair, chair: true },
+    { box: { x0: CHAIRPOS.x+23, y0: CHAIRPOS.y+2, x1: CHAIRPOS.x+28, y1: CHAIRPOS.y+26 }, f: drawChairArm },
+    { box: { x0: CATPOS.x, y0: CATPOS.y, x1: CATPOS.x+CATPOS.w, y1: CATPOS.y+CATPOS.d }, f: scene.manIn ? drawCat : drawCushion },
+    ...(scene.manIn ? [{ box: manBox, f: drawMan, man: true }] : []),
+    ...(her.visible ? [{ box: { x0: her.x-6, y0: her.y-6, x1: her.x+6, y1: her.y+6 }, f: drawHer, her: true }] : []),
+  ];
+  // a is in front of b when a lies entirely at larger x or larger y (both axes point toward the viewer)
+  const inFront = (a, b) => {
+    if (a.man && m.sitting && b.chair) return true;   // sitting: always on the seat, in front of the backrest
+    if (b.man && m.sitting && a.chair) return false;
+    if ((a.man || a.her) && b.plantFront) return false;   // the two plants near the rug are always in front of the people
+    if ((b.man || b.her) && a.plantFront) return true;
+    if ((a.man || a.her) && b.plantBack) return true;     // the plant by the cabinet is always behind them
+    if ((b.man || b.her) && a.plantBack) return false;
+    const aF = a.box.x0 >= b.box.x1 - 0.5 || a.box.y0 >= b.box.y1 - 0.5; // a entirely nearer on one axis
+    const bF = b.box.x0 >= a.box.x1 - 0.5 || b.box.y0 >= a.box.y1 - 0.5;
+    if (aF !== bF) return aF;                          // one clear answer
+    return (a.box.x1 + a.box.y1) > (b.box.x1 + b.box.y1); // overlapping, or nearer on different axes: compare near corners
+  };
+  const order = [];
+  const left = items.slice();
+  while (left.length) { // pick an item that nothing else in the pool is behind of → draw it next
+    let pick = left.findIndex(a => left.every(b => a === b || !inFront(a, b)));
+    if (pick < 0) { // contradictory pair somewhere: take the item with the farthest near corner
+      let best = Infinity; left.forEach((a, i) => { const k = a.box.x1 + a.box.y1; if (k < best) { best = k; pick = i; } });
+    }
+    order.push(left.splice(pick, 1)[0]);
+  }
+  order.forEach(i => i.f());
+  if (volume.atPlayer) { // a little level bar above the record player while he adjusts it
+    const [bx, by] = P(TTPOS.x+18, TTPOS.y+13, 44), w = 22, x0 = Math.round(bx - w/2), y0 = Math.round(by);
+    ctx.fillStyle = '#2a211a'; ctx.fillRect(x0-1, y0-1, w+2, 5);
+    ctx.fillStyle = '#5a4632'; ctx.fillRect(x0, y0, w, 3);
+    ctx.fillStyle = '#e5a24a'; ctx.fillRect(x0, y0, Math.round(w * volume.level), 3);
+  }
+  // music notes while playing: from the record player, and from him whistling along in the chair
+  if (whistling()) {
+    const m = scene.man;
+    ctx.fillStyle = '#f1e4c8'; ctx.font = '8px VT323';
+    for (let i=0;i<2;i++){ const ph=(scene.t/1500 + i/2)%1; const [nx,ny]=P(m.x+7,m.y+8,37+ph*20); ctx.globalAlpha=0.9*(1-ph); ctx.fillText(i?'♪':'♫', nx-3-ph*8+Math.sin(ph*5)*2, ny); }
+    ctx.globalAlpha = 1;
+  }
+  if (player.playing) {
+    ctx.fillStyle = '#f1e4c8'; ctx.font = '10px VT323';
+    for (let i=0;i<3;i++){ const ph=(scene.t/1200 + i/3)%1; const [nx,ny]=P(TTPOS.x+15,TTPOS.y+13,34+ph*40); ctx.globalAlpha=1-ph; ctx.fillText('♪', nx-4+Math.sin(ph*6)*4, ny); }
+    ctx.globalAlpha = 1;
+  }
+  // evening: the room darkens and the lamp carries the mood with a warm pool of light
+  const dk = mood.dark, gl = lamp.glow;
+  if (mood.glow > 0.01) { // low sun through the window: a faint warm wash over the room, strongest near the window
+    const [wx, wy] = P(0, 95, 82); const g = ctx.createRadialGradient(wx, wy, 10, wx, wy, 260);
+    g.addColorStop(0, `rgba(255,150,80,${0.22*mood.glow})`); g.addColorStop(1, `rgba(255,150,80,${0.06*mood.glow})`);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+  if (dk > 0.005) {
+    const shade = (0.08 + 0.62 * dk * dk) * (1 - 0.55 * mood.glow);       // dusk (0.5) is a gentle blue dimming, night (1) is properly dark; the sunset glow holds it back
+    const tint = dk < 0.5 ? [40,52,92] : [40,52,92].map((v,i) => v + ([18,12,30][i]-v) * (dk-0.5)*2);   // blue at dusk, near-black at night
+    const T = tint.map(v=>v|0).join(',');
+    const [lx, ly] = P(LAMP.x+2, LAMP.y+14, 0);
+    const g = ctx.createRadialGradient(lx, ly, 8, lx, ly, 150);            // the pool of light opens up as the lamp warms
+    g.addColorStop(0, `rgba(${T},${shade*(1 - 0.85*gl)})`); g.addColorStop(0.35, `rgba(${T},${shade*(1 - 0.45*gl)})`); g.addColorStop(1, `rgba(${T},${shade})`);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    if (gl > 0.02) { const w = ctx.createRadialGradient(lx, ly, 2, lx, ly, 70); w.addColorStop(0, `rgba(255,190,110,${0.22*dk*gl})`); w.addColorStop(1, 'rgba(255,190,110,0)'); ctx.fillStyle = w; ctx.fillRect(0, 0, W, H); }
+    if (gl > 0.02) { // the small lamp on the cabinet makes its own little pool of light up there
+      const [sx, sy] = P(CAB.x+123, CAB.y+13, CAB.h+14); const w = ctx.createRadialGradient(sx, sy, 2, sx, sy, 34);
+      w.addColorStop(0, `rgba(255,205,130,${0.5*dk*gl})`); w.addColorStop(0.5, `rgba(255,195,120,${0.18*dk*gl})`); w.addColorStop(1, 'rgba(255,190,110,0)'); ctx.fillStyle = w; ctx.fillRect(0, 0, W, H); }
+    if (mood.candle > 0.03) { const [cx, cy] = P(TTPOS.x+31, TTPOS.y+26.5, 29); const c = ctx.createRadialGradient(cx, cy, 2, cx, cy, 40); c.addColorStop(0, `rgba(255,170,90,${0.28*dk*mood.candle})`); c.addColorStop(1, 'rgba(255,170,90,0)'); ctx.fillStyle = c; ctx.fillRect(0, 0, W, H); }
+  }
+  // empty hint
+  if (!albums.length) { ctx.fillStyle='rgba(241,228,200,.7)'; ctx.font='10px Silkscreen, monospace'; ctx.fillText('EMPTY CABINET', CX+CAB.x-CAB.y+18, CY+(CAB.x+CAB.y)/2-CAB.h-14); }
+}
+
+// click / hover on cabinet covers
+function slotAt(mx,my){
+  for (let i=0;i<albums.length;i++){
+    const s = slotRect(i), fy = s.y;
+    if (albums[i].taken) continue;
+    const [x0,y0] = P(s.x-1,fy,s.z+s.h), [x1,y1]=P(s.x+s.w+1,fy,s.z+s.h), [x3,y3]=P(s.x-1,fy,s.z);
+    // parallelogram: p = x0 + u*(x1-x0) + v*(x3-x0)
+    const ux=x1-x0, uy=y1-y0, vx=x3-x0, vy=y3-y0, det=ux*vy-uy*vx;
+    const u=((mx-x0)*vy-(my-y0)*vx)/det, v=((my-y0)*ux-(mx-x0)*uy)/det;
+    if (u>=0&&u<=1&&v>=0&&v<=1) return i;
+  }
+  return -1;
+}
+function canvasPos(e){ const r=canvas.getBoundingClientRect(); return [(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height]; }
+function setHover(a){ if (hover === a) return; hover = a; renderPick(); shelfEl.querySelectorAll('.album').forEach((el,i) => el.classList.toggle('hover', albums[i] === a)); }
+const pickEl = document.getElementById('pick');
+function renderPick(){
+  const a = hover;
+  if (!a) { pickEl.innerHTML = '<div class="pick-empty">Hover a spine in the cabinet to see which record it is. Click to put it on.</div>'; return; }
+  pickEl.innerHTML = '<img alt=""><div class="t"><b></b><span></span><span></span></div>';
+  pickEl.querySelector('img').src = a.cover;
+  pickEl.querySelector('b').textContent = a.title;
+  const sp = pickEl.querySelectorAll('span'); sp[0].textContent = a.artist + (a.year ? ' · ' + a.year : ''); sp[1].textContent = a.tracks.length + ' tracks';
+}
+function onTurntable(mx, my){ // screen-space test against the plinth top (a bit enlarged)
+  const pts = [P(TTPOS.x-2,TTPOS.y-2,27),P(TTPOS.x+38,TTPOS.y-2,27),P(TTPOS.x+38,TTPOS.y+32,27),P(TTPOS.x-2,TTPOS.y+32,27)];
+  ctx.beginPath(); pts.forEach((p,i) => i ? ctx.lineTo(p[0],p[1]) : ctx.moveTo(p[0],p[1])); ctx.closePath();
+  return ctx.isPointInPath(mx, my);
+}
+function onMug(mx, my){ // the mug standing on the armrest
+  if (drinkPhase(scene.t) >= 0) return false;
+  const [sx, sy] = P(CHAIRPOS.x+25.5, CHAIRPOS.y+16, 19.5);
+  return Math.abs(mx - sx) <= 4 && Math.abs(my - sy) <= 5;
+}
+function sipNow(){ if (scene.man.sitting && !busy() && drinkPhase(scene.t) < 0) { drink.start = scene.t; setStatus('A sip of tea.'); } }
+canvas.addEventListener('mousemove', e => { const [x,y]=canvasPos(e); const i=slotAt(x,y); setHover(i>=0?albums[i]:null); canvas.style.cursor = (i>=0 || onTurntable(x,y) || onMug(x,y)) ? 'pointer' : 'default'; });
+canvas.addEventListener('mouseleave', () => setHover(null));
+document.addEventListener('pointerdown', () => { if (player.needsClick && sdk.player) { player.needsClick = false; sdk.player.activateElement().then(() => sdk.player.resume()).catch(() => {}); setStatus(''); } }, { passive: true });
+canvas.addEventListener('click', e => { if (!scene.manIn) return; const [x,y]=canvasPos(e); const i=slotAt(x,y); if (i>=0) selectAlbum(i); else if (onMug(x,y)) sipNow(); else if (onTurntable(x,y)) togglePlayback(); });
+
+function loop(now){
+  scene.t = now;
+  stepAnim(now);
+  herTick(now);
+  volumeTick(now);
+  lampTick(now);
+  dozeTick(now);
+  moodTick(now);
+  updateRain(now);
+  whistleTick(now);
+  drinkTick(now);
+  if (player.playing || scene.runout) scene.angle += 0.08;
+  draw();
+  requestAnimationFrame(loop);
+}
+albums.forEach(a => { a.taken = false; coverImage(a); });
+sortAlbums();
+renderShelf();
+requestAnimationFrame(loop);
+pendingImportFromHash();
+handleRedirect().then(updateAuthUI).then(runPendingImport);
+if (!auth) setStatus('Connect to Spotify to open the room.');
+</script>
+</body>
+</html>
