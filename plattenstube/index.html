@@ -221,12 +221,13 @@ async function fetchAlbums(ids, onEach){ // one request per album (Spotify's dev
   async function worker(){
     while (queue.length) {
       const id = queue.shift();
-      try { const a = await fetchAlbum(id); onEach(a); }
-      catch (e) { lastErr = e; if (/429|rate/i.test(e.message)) { queue.push(id); await new Promise(r => setTimeout(r, 3000)); } }
-      await new Promise(r => setTimeout(r, 150));
+      try { const a = await fetchAlbum(id); onEach(a); done++; nowEl.innerHTML = `<span style="color:var(--muted)">Fetching the records… ${done}/${ids.length}</span>`; }
+      catch (e) { lastErr = e; if (/429|rate/i.test(e.message) && retries++ < 40) { queue.push(id); await new Promise(r => setTimeout(r, 5000)); } }
+      await new Promise(r => setTimeout(r, 250));
     }
   }
-  await Promise.all([worker(), worker(), worker()]);
+  let done = 0, retries = 0;
+  await Promise.all([worker(), worker()]);
   return lastErr;
 }
 function albumRecord(d){
@@ -257,7 +258,8 @@ async function loadSharedCollection(){ // guests: the cabinet is the owner's, ta
   try { const r = await fetch('collection.json', { cache: 'no-store' }); if (r.ok) { const d = await r.json(); ids = Array.isArray(d) ? d : d.ids; } } catch (e) {}
   if (!ids) { if (!albums.length) setStatus('The record collection has not been published yet.'); return; }   // offline or not published: keep what we had
   ids = [...new Set(ids.filter(id => /^[A-Za-z0-9]+$/.test(id)))].slice(0, SLOTS);
-  const have = Object.fromEntries(albums.map(a => [a.id, a]));
+  let cached = []; try { cached = JSON.parse(localStorage.getItem('plattenstube.cache') || '[]'); } catch (e) {}
+  const have = Object.fromEntries([...cached, ...albums].map(a => [a.id, a]));
   albums = ids.filter(id => have[id]).map(id => have[id]);                           // what we already know is in the cabinet right away
   albums.forEach(a => { a.taken = false; a.arriving = false; coverImage(a); }); sortAlbums(); renderShelf(); draw();
   const missing = ids.filter(id => !have[id]);
@@ -266,7 +268,8 @@ async function loadSharedCollection(){ // guests: the cabinet is the owner's, ta
   (async () => {
     const err = await fetchAlbums(missing, a => { a.taken = true; a.arriving = true; coverImage(a); albums.push(a); sortAlbums(); renderShelf(); });
     bringing.fetching = false; save();
-    if (err && !albums.length) nowEl.innerHTML = `<span style="color:var(--bad)">Could not load the collection from Spotify (${err.message}).</span>`;
+    if (err && albums.length < ids.length) nowEl.innerHTML = `<span style="color:var(--bad)">${ids.length - albums.length} of ${ids.length} records could not be loaded from Spotify (${err.message}).</span>`;
+    else nowEl.innerHTML = '<span style="color:var(--muted)">Nothing yet. Pick a record from the cabinet.</span>';
   })();
 }
 /* ---------- guests: while the collection loads, he carries the records in from the edge, a stack at a time, and slots them ---------- */
@@ -326,14 +329,15 @@ async function api(path, opts = {}){
   const t = await token();
   if (!t) throw new Error('not logged in');
   let r = await fetch('https://api.spotify.com/v1' + path, { ...opts, headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json', ...(opts.headers||{}) } });
-  if (r.status === 429) { // rate limited: wait as long as Spotify asks, then try once more
-    const wait = Math.min(30, parseInt(r.headers.get('Retry-After') || '2', 10) || 2) * 1000 + 200;
+  if (r.status === 429) { // rate limited: wait as long as Spotify asks (up to two minutes), then try once more
+    const secs = Math.min(120, parseInt(r.headers.get('Retry-After') || '3', 10) || 3), wait = secs * 1000 + 200;
+    if (bringing.fetching) nowEl.innerHTML = `<span style="color:var(--muted)">Spotify asks us to slow down… waiting ${secs} s</span>`;
     await new Promise(res => setTimeout(res, wait));
     r = await fetch('https://api.spotify.com/v1' + path, { ...opts, headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json', ...(opts.headers||{}) } });
   }
   if (r.status === 204) return null;
   const d = await r.json().catch(() => null);
-  if (!r.ok) throw new Error((d && d.error && d.error.message) || ('HTTP ' + r.status));
+  if (!r.ok) throw new Error(((d && d.error && d.error.message) || ('HTTP ' + r.status)) + ' – ' + path.split('?')[0]);   // which endpoint, for the error box
   return d;
 }
 let me = null;
@@ -954,7 +958,7 @@ document.querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
   else if (t === 'crackle') playCrackle(3200);
   else if (t.startsWith('her-')) herRequest = t.slice(4);
 });
-document.getElementById('reload').onclick = () => { albums = []; save(); location.reload(); };   // owner: empty this browser's cabinet and load collection.json afresh
+document.getElementById('reload').onclick = () => { try { localStorage.setItem('plattenstube.cache', JSON.stringify(albums)); } catch (e) {} albums = []; save(); location.reload(); };   // owner: empty this browser's cabinet and load collection.json afresh (known album details are kept, so Spotify is not asked again)
 function herTick(now){
   if (her.visible) { runQueue(her, her.anim, now); if (!her.anim.cur && !her.anim.queue.length) { her.visible = false; her.act = null; her.next = now + 70000 + Math.random()*110000; } return; }
   if (!scene.man.sitting || !scene.manIn || busy() || drinkPhase(now) >= 0) return;      // she only comes in while he is settled in his chair
