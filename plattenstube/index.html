@@ -54,6 +54,7 @@ header h1{font-family:var(--display);font-size:16px;margin:0;letter-spacing:1px;
 .primary{font-family:var(--display);font-size:10px;background:#1db954;color:#0b2914;border:0;padding:8px 12px;cursor:pointer}
 .primary[disabled]{background:var(--muted);cursor:default}
 .mini{background:var(--panel2);border:2px solid var(--line);padding:2px 8px;cursor:pointer;font-size:17px}
+.nextRow{padding:6px 12px 10px}
 main{flex:1;display:flex;min-height:0}
 .stage{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 40%,#2c2219 0%,#1a1410 70%)}
 canvas{image-rendering:pixelated;image-rendering:crisp-edges;max-width:100%;max-height:100%;cursor:pointer}
@@ -121,6 +122,7 @@ body:not(.owner) .search,body:not(.owner) .album .x,body:not(.owner) #share,body
     <div class="pick" id="pick"><div class="pick-empty">Hover a spine in the cabinet to see which record it is. Click to put it on.</div></div>
     <h2>NOW PLAYING</h2>
     <div class="now" id="now"><span style="color:var(--muted)">Nothing yet. Pick a record from the cabinet.</span></div>
+    <div class="nextRow"><button id="next" class="mini" title="He puts this record back and picks another one at random">Another one, at random</button></div>
     <div class="vol" id="vol">
       <label id="vollabel"><span id="volpct">80%</span><input id="volslider" type="range" min="0" max="100" step="1" value="80"></label>
       <span id="volhint" class="hint" hidden>he is on his way to the record player…</span>
@@ -157,22 +159,43 @@ function save(){ if (guestView) return; try { localStorage.setItem('plattenstube
 const imgCache = {};
 function coverImage(a){
   if (imgCache[a.id]) return imgCache[a.id];
+  if (a.colorV !== COLOR_VERSION) a.color = null;                 // colour chosen by an older method: redone once the image is in
   const img = new Image();
   img.crossOrigin = 'anonymous';
-  img.onload = () => { a.color = dominant(img); draw(); };
+  img.onload = () => { a.color = dominant(img); a.colorV = COLOR_VERSION; draw(); };
   img.onerror = () => { const i2 = new Image(); i2.onload = draw; i2.src = a.cover; imgCache[a.id] = i2; };
   img.src = a.cover;
   imgCache[a.id] = img;
   return img;
 }
 function fallbackColor(id){ let h=0; for (const c of String(id)) h=(h*31+c.charCodeAt(0))>>>0; return `hsl(${h%360},45%,${38+(h>>8)%18}%)`; }
-function dominant(img){
+const COLOR_VERSION = 2;                                        // bump when the way a cover's colour is chosen changes, so stored colours get redone
+function dominant(img){ // the cover's accent colour: a saturation-weighted vote by hue, so a red patch on a grey cover wins over the grey
   try {
-    const t = document.createElement('canvas'); t.width = t.height = 8;
-    const x = t.getContext('2d'); x.drawImage(img, 0, 0, 8, 8);
-    const d = x.getImageData(0,0,8,8).data; let r=0,g=0,b=0;
-    for (let i=0;i<d.length;i+=4){ r+=d[i]; g+=d[i+1]; b+=d[i+2]; }
-    const n = d.length/4; return `rgb(${r/n|0},${g/n|0},${b/n|0})`;
+    const N = 32, t = document.createElement('canvas'); t.width = t.height = N;
+    const x = t.getContext('2d'); x.drawImage(img, 0, 0, N, N);
+    const d = x.getImageData(0, 0, N, N).data, B = 24, buckets = Array.from({ length: B }, () => ({ w: 0, r: 0, g: 0, b: 0 }));
+    let ar = 0, ag = 0, ab = 0, kept = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i]/255, g = d[i+1]/255, b = d[i+2]/255; ar += r; ag += g; ab += b;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, c = max - min;
+      const sat = c === 0 ? 0 : c / (1 - Math.abs(2*l - 1));
+      if (sat < 0.25 || l < 0.12 || l > 0.9) continue;                                  // greys, blacks and whites carry no colour
+      let h = c === 0 ? 0 : max === r ? ((g - b) / c + 6) % 6 : max === g ? (b - r) / c + 2 : (r - g) / c + 4; h /= 6;
+      const w = sat * (1 - Math.abs(l - 0.5) * 1.2);                                     // strong, mid-light colours count most
+      const k = Math.floor(h * B) % B; buckets[k].w += w; buckets[k].r += r*w; buckets[k].g += g*w; buckets[k].b += b*w; kept++;
+    }
+    const n = d.length / 4;
+    if (kept < n * 0.02) return `rgb(${ar/n*255*0.85|0},${ag/n*255*0.85|0},${ab/n*255*0.85|0})`;   // a monochrome cover gets a plain, slightly darkened spine
+    let best = 0; buckets.forEach((bk, k) => { if (bk.w > buckets[best].w) best = k; });
+    const pick = [best, (best + 1) % B, (best + B - 1) % B].map(k => buckets[k]);        // the winning hue and its neighbours (red + orange → red-orange)
+    const W = pick.reduce((s, bk) => s + bk.w, 0);
+    let r = pick.reduce((s, bk) => s + bk.r, 0) / W, g = pick.reduce((s, bk) => s + bk.g, 0) / W, b = pick.reduce((s, bk) => s + bk.b, 0) / W;
+    // lift into a range that works for a spine: lightness 30–60 %, saturation at least 45 %
+    const max = Math.max(r, g, b), min = Math.min(r, g, b); let l = (max + min) / 2, c = max - min, sat = c === 0 ? 0 : c / (1 - Math.abs(2*l - 1));
+    const h = c === 0 ? 0 : max === r ? ((g - b) / c + 6) % 6 * 60 : max === g ? ((b - r) / c + 2) * 60 : ((r - g) / c + 4) * 60;
+    l = Math.min(0.6, Math.max(0.3, l)); sat = Math.max(0.45, sat);
+    return `hsl(${h.toFixed(0)},${(sat*100).toFixed(0)}%,${(l*100).toFixed(0)}%)`;
   } catch (e) { return null; }
 }
 
@@ -922,6 +945,11 @@ document.querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
   else if (t === 'crackle') playCrackle(3200);
   else if (t.startsWith('her-')) herRequest = t.slice(4);
 });
+document.getElementById('next').onclick = () => { // anyone: he puts the current record away and picks another at random
+  const others = albums.map((a, i) => i).filter(i => albums[i] !== scene.record);
+  if (!others.length || busy() || !scene.manIn) return;
+  selectAlbum(others[Math.floor(Math.random() * others.length)]);
+};
 document.getElementById('reload').onclick = () => { albums = []; save(); location.reload(); };   // owner: drop this browser's cabinet and load collection.json afresh
 function herTick(now){
   if (her.visible) { runQueue(her, her.anim, now); if (!her.anim.cur && !her.anim.queue.length) { her.visible = false; her.act = null; her.next = now + 70000 + Math.random()*110000; } return; }
