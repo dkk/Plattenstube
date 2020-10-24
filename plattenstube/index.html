@@ -35,12 +35,16 @@ header h1{font-family:var(--display);font-size:16px;margin:0;letter-spacing:1px;
 .result .add[disabled]{background:var(--muted);cursor:default}
 .status{color:var(--muted);min-height:1.2em;flex:1 1 100%}
 .stage{position:relative}
+#bubble{position:absolute;z-index:4;pointer-events:none;max-width:300px;background:rgb(165,105,57);border:3px solid rgb(81,49,25);color:#f1e4c8;font-family:var(--body);font-size:19px;line-height:1.1;padding:7px 10px;image-rendering:pixelated;transition:opacity .5s}
+#bubble .tail{position:absolute;left:var(--tail,24px);bottom:-14px;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:12px solid rgb(81,49,25)}
+#bubble .tail::after{content:"";position:absolute;left:-4px;top:-13px;border-left:4px solid transparent;border-right:4px solid transparent;border-top:8px solid rgb(165,105,57)}
 .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(26,20,16,.55)}
 .overlay .hint{color:var(--muted);font-size:17px}
 .primary.big{font-size:14px;padding:14px 22px;box-shadow:0 8px 30px rgba(0,0,0,.5)}
 .foot{display:flex;flex-direction:column;gap:8px;align-items:flex-start;padding:8px 12px;border-top:3px solid var(--line);margin-top:auto}
 .testpanel{position:absolute;left:8px;top:8px;display:flex;flex-direction:column;gap:4px;z-index:5;background:rgba(26,20,16,.7);padding:6px;border:2px solid var(--line)}
 .testpanel b{font-family:var(--display);font-size:9px;color:var(--muted)}
+.testpanel .adminTitle{margin-top:8px;padding-top:6px;border-top:2px solid var(--line)}
 .testpanel button{background:var(--panel2);border:2px solid var(--line);color:var(--fg);padding:1px 6px;font-size:15px;cursor:pointer;text-align:left}
 .whoRow{display:flex;gap:8px;align-items:center;width:100%;min-width:0}
 .whoRow .hint{color:var(--muted)}
@@ -54,7 +58,6 @@ header h1{font-family:var(--display);font-size:16px;margin:0;letter-spacing:1px;
 .primary{font-family:var(--display);font-size:10px;background:#1db954;color:#0b2914;border:0;padding:8px 12px;cursor:pointer}
 .primary[disabled]{background:var(--muted);cursor:default}
 .mini{background:var(--panel2);border:2px solid var(--line);padding:2px 8px;cursor:pointer;font-size:17px}
-.nextRow{padding:6px 12px 10px}
 main{flex:1;display:flex;min-height:0}
 .stage{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 40%,#2c2219 0%,#1a1410 70%)}
 canvas{image-rendering:pixelated;image-rendering:crisp-edges;max-width:100%;max-height:100%;cursor:pointer}
@@ -66,15 +69,19 @@ aside h2{font-family:var(--display);font-size:11px;margin:0;padding:10px 12px;bo
 .pick .t b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:var(--accent);line-height:1.1}
 .pick .t span{color:var(--muted);display:block;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pick-empty{color:var(--muted)}
-.now{padding:10px 12px;border-bottom:3px solid var(--line);min-height:84px}
-.now b{color:var(--accent)}
+.now{padding:10px 12px;min-height:60px}
+.now .t{min-width:0}
+.now b{color:var(--accent);display:block;line-height:1.1}
 .now .track{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.now button{margin-top:6px;background:var(--panel2);border:2px solid var(--line);padding:2px 10px;cursor:pointer}
-.vol{padding:8px 12px;border-bottom:3px solid var(--line);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.vol .hint{color:var(--muted);font-size:17px;flex:1 1 100%}
-.vol label{display:flex;align-items:center;gap:8px;flex:1;min-width:140px}
-.vol #volpct{color:var(--accent);min-width:3.2em;font-variant-numeric:tabular-nums}
-.vol input[type=range]{flex:1;accent-color:var(--accent);cursor:pointer}
+.now .artist{color:var(--muted)}
+.vol{padding:4px 12px 10px;border-bottom:3px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.vol .btnRow{display:flex;gap:8px}
+.vol .btnRow button:disabled{opacity:.45;cursor:default}
+.vol #volhint{color:var(--muted);font-size:17px}
+.vol label{display:flex;align-items:center;gap:8px;width:100%;min-width:0}
+.vol label .hint{color:var(--muted);flex:none}
+.vol #volpct{color:var(--accent);flex:none;min-width:2.6em;text-align:right;font-variant-numeric:tabular-nums}
+.vol input[type=range]{flex:1 1 0;min-width:0;width:0;margin:0;accent-color:var(--accent);cursor:pointer}
 .shelf{overflow:auto;flex:1}
 .album{display:flex;gap:8px;align-items:center;padding:6px 10px;border-bottom:2px solid var(--line);cursor:pointer}
 .album:hover{background:var(--panel2)}
@@ -104,6 +111,7 @@ body:not(.owner) .search,body:not(.owner) .album .x,body:not(.owner) #share,body
 </header>
 <main>
   <div class="stage"><canvas id="c"></canvas>
+    <div id="bubble" hidden><div class="txt"></div><div class="tail"></div></div>
     <div class="testpanel" id="testpanel">
       <b>TEST</b>
       <button data-t="day">day</button><button data-t="sunset">sunset</button><button data-t="dusk">dusk</button><button data-t="night">night</button><button data-t="realtime">real time</button>
@@ -114,26 +122,28 @@ body:not(.owner) .search,body:not(.owner) .album .x,body:not(.owner) #share,body
       <button data-t="catwake">cat wakes</button>
       <button data-t="crackle">crackle</button>
       <button data-t="her-cat">her: cat</button><button data-t="her-read">her: read</button><button data-t="her-candle">her: candle</button><button data-t="her-talk">her: talk</button>
+      <b class="adminTitle">ADMIN</b>
+      <button id="share" title="Anyone who opens the link gets these records added to their cabinet">copy collection link</button>
+      <button id="export" title="Download collection.json — put it next to index.html on the server and every guest gets this collection">save collection file</button>
+      <button id="reload" title="Empty the cabinet in this browser and load collection.json again">reload collection</button>
+      <button id="savebooks" title="Look up every book, fetch its cover and download books.json — put it next to index.html">save book data</button>
     </div>
     <div class="overlay" id="overlay"><button id="connect" class="primary big">Connect to Spotify</button><div class="hint">Needs Spotify Premium. The room fills once you are in.</div></div>
   </div>
   <aside>
-    <h2>RECORD</h2>
-    <div class="pick" id="pick"><div class="pick-empty">Hover a spine in the cabinet to see which record it is. Click to put it on.</div></div>
+    <h2>PICKED</h2>
+    <div class="pick" id="pick"><div class="pick-empty">Hover a record or a book to see what it is. Click a record and he puts it on.</div></div>
     <h2>NOW PLAYING</h2>
     <div class="now" id="now"><span style="color:var(--muted)">Nothing yet. Pick a record from the cabinet.</span></div>
-    <div class="nextRow"><button id="next" class="mini" title="He puts this record back and picks another one at random">Another one, at random</button></div>
     <div class="vol" id="vol">
-      <label id="vollabel"><span id="volpct">80%</span><input id="volslider" type="range" min="0" max="100" step="1" value="80"></label>
+      <div class="btnRow"><button id="stop" class="mini" disabled>Stop</button><button id="next" class="mini" title="He puts this record back and picks another one at random">Next album</button></div>
+      <label id="vollabel"><span class="hint">Volume</span><span id="volpct">80%</span><input id="volslider" type="range" min="0" max="100" step="1" value="80"></label>
       <span id="volhint" class="hint" hidden>he is on his way to the record player…</span>
     </div>
-    <h2>SCHALLPLATTENSCHRANK</h2>
+    <h2>RECORD CABINET</h2>
     <div class="shelf" id="shelf"></div>
     <div class="foot">
       <div class="whoRow"><span class="hint">Spotify:</span><span id="who"></span></div>
-      <button id="share" class="mini" title="Anyone who opens the link gets these records added to their cabinet">Copy collection link</button>
-      <button id="export" class="mini" title="Download collection.json — put it next to plattenstube.html on the server and every guest gets this collection">Save collection file</button>
-      <button id="reload" class="mini" title="Empty the cabinet in this browser and load collection.json again">Reload collection</button>
       <button id="disconnect" class="mini" hidden>Log out</button>
     </div>
   </aside>
@@ -169,33 +179,29 @@ function coverImage(a){
   return img;
 }
 function fallbackColor(id){ let h=0; for (const c of String(id)) h=(h*31+c.charCodeAt(0))>>>0; return `hsl(${h%360},45%,${38+(h>>8)%18}%)`; }
-const COLOR_VERSION = 2;                                        // bump when the way a cover's colour is chosen changes, so stored colours get redone
-function dominant(img){ // the cover's accent colour: a saturation-weighted vote by hue, so a red patch on a grey cover wins over the grey
+const COLOR_VERSION = 4;                                        // bump when the way a cover's colour is chosen changes, so stored colours get redone
+function dominant(img){ // the cover's colour: sort the coloured pixels into buckets (hue × lightness) and take the fullest bucket
   try {
     const N = 32, t = document.createElement('canvas'); t.width = t.height = N;
     const x = t.getContext('2d'); x.drawImage(img, 0, 0, N, N);
-    const d = x.getImageData(0, 0, N, N).data, B = 24, buckets = Array.from({ length: B }, () => ({ w: 0, r: 0, g: 0, b: 0 }));
-    let ar = 0, ag = 0, ab = 0, kept = 0;
+    const d = x.getImageData(0, 0, N, N).data, col = {}, grey = {};
     for (let i = 0; i < d.length; i += 4) {
-      const r = d[i]/255, g = d[i+1]/255, b = d[i+2]/255; ar += r; ag += g; ab += b;
-      const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, c = max - min;
+      const r = d[i], g = d[i+1], b = d[i+2], max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 510, c = (max - min) / 255;
       const sat = c === 0 ? 0 : c / (1 - Math.abs(2*l - 1));
-      if (sat < 0.25 || l < 0.12 || l > 0.9) continue;                                  // greys, blacks and whites carry no colour
-      let h = c === 0 ? 0 : max === r ? ((g - b) / c + 6) % 6 : max === g ? (b - r) / c + 2 : (r - g) / c + 4; h /= 6;
-      const w = sat * (1 - Math.abs(l - 0.5) * 1.2);                                     // strong, mid-light colours count most
-      const k = Math.floor(h * B) % B; buckets[k].w += w; buckets[k].r += r*w; buckets[k].g += g*w; buckets[k].b += b*w; kept++;
+      let key, store;
+      if (sat >= 0.2 && l >= 0.1 && l <= 0.92) {                                             // a coloured pixel: 24 hue bands × 3 lightness bands
+        const h = max === r ? ((g - b) / (max - min) + 6) % 6 : max === g ? (b - r) / (max - min) + 2 : (r - g) / (max - min) + 4;
+        key = Math.floor(h * 4) + ':' + Math.floor(l * 3); store = col;
+      } else { key = 'g' + Math.floor(l * 8); store = grey; }                                 // greys, blacks, whites by lightness only
+      const bk = store[key] || (store[key] = { n: 0, r: 0, g: 0, b: 0 }); bk.n++; bk.r += r; bk.g += g; bk.b += b;
     }
-    const n = d.length / 4;
-    if (kept < n * 0.02) return `rgb(${ar/n*255*0.85|0},${ag/n*255*0.85|0},${ab/n*255*0.85|0})`;   // a monochrome cover gets a plain, slightly darkened spine
-    let best = 0; buckets.forEach((bk, k) => { if (bk.w > buckets[best].w) best = k; });
-    const pick = [best, (best + 1) % B, (best + B - 1) % B].map(k => buckets[k]);        // the winning hue and its neighbours (red + orange → red-orange)
-    const W = pick.reduce((s, bk) => s + bk.w, 0);
-    let r = pick.reduce((s, bk) => s + bk.r, 0) / W, g = pick.reduce((s, bk) => s + bk.g, 0) / W, b = pick.reduce((s, bk) => s + bk.b, 0) / W;
-    // lift into a range that works for a spine: lightness 30–60 %, saturation at least 45 %
-    const max = Math.max(r, g, b), min = Math.min(r, g, b); let l = (max + min) / 2, c = max - min, sat = c === 0 ? 0 : c / (1 - Math.abs(2*l - 1));
-    const h = c === 0 ? 0 : max === r ? ((g - b) / c + 6) % 6 * 60 : max === g ? ((b - r) / c + 2) * 60 : ((r - g) / c + 4) * 60;
-    l = Math.min(0.6, Math.max(0.3, l)); sat = Math.max(0.45, sat);
-    return `hsl(${h.toFixed(0)},${(sat*100).toFixed(0)}%,${(l*100).toFixed(0)}%)`;
+    const n = d.length / 4, coloured = Object.values(col).reduce((s, bk) => s + bk.n, 0);
+    const pool = coloured >= n * 0.02 ? col : grey;                                        // colour wins whenever the cover has any to speak of
+    let best = null; for (const k in pool) if (!best || pool[k].n > best.n) best = pool[k];
+    let r = best.r / best.n, g = best.g / best.n, b = best.b / best.n;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 510;
+    const f = l < 0.22 ? 0.22 / Math.max(l, 0.02) : l > 0.65 ? 0.65 / l : 1;             // keep it readable as a spine: not pitch black, not pastel
+    return `rgb(${Math.min(255, r*f)|0},${Math.min(255, g*f)|0},${Math.min(255, b*f)|0})`;
   } catch (e) { return null; }
 }
 
@@ -236,8 +242,8 @@ function pendingImportFromHash(){
   try { sessionStorage.setItem('plattenstube.import', m[1]); } catch (e) {}
   history.replaceState(null, '', REDIRECT);
 }
-async function fetchAlbum(id){ // one album by id -> the shelf's album record
-  return albumRecord(await api('/albums/' + id));
+async function fetchAlbum(id, opts){ // one album by id -> the shelf's album record
+  return albumRecord(await api('/albums/' + id, opts));
 }
 function albumRecord(d){
   const tracks = (d.tracks && d.tracks.items || []).map(t => ({ title: t.name, uri: t.uri, preview: t.preview_url }));
@@ -276,10 +282,14 @@ async function loadSharedCollection(){ // the cabinet comes from collection.json
   }
   albums.forEach(a => { a.taken = false; coverImage(a); }); sortAlbums(); save(); renderShelf(); draw();
 }
-async function ensureAlbum(a){ // a record from an ids-only file: fetch its details the moment it is picked
-  if (a.uri) return a;
-  try { Object.assign(a, albumRecord(await api('/albums/' + a.id))); coverImage(a); sortAlbums(); save(); renderShelf(); }
-  catch (e) { a.failed = e.message; }
+async function ensureAlbum(a){ // a record with only an id, or one added from a search result while Spotify was throttling: complete it the moment it is picked
+  if (a.uri && !a.partial) return a;
+  try {
+    const full = albumRecord(await api('/albums/' + a.id, { quick: true }));
+    Object.assign(a, full); delete a.partial; a.color = null; delete imgCache[a.id]; coverImage(a); sortAlbums(); save(); renderShelf();
+    if (player.album === a && nowEl.querySelector('b')) renderNow(a, player.lastTrack || '', !player.playing);   // the panel picks up cover, title and artist too
+  }
+  catch (e) { if (!a.uri) a.failed = e.message; }                                  // a partial record plays fine as it is; we try again next time
   return a;
 }
 document.getElementById('export').onclick = () => { // owner: download collection.json for the server
@@ -318,7 +328,7 @@ async function api(path, opts = {}){
   if (!t) throw new Error('not logged in');
   let r = await fetch('https://api.spotify.com/v1' + path, { ...opts, headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json', ...(opts.headers||{}) } });
   if (r.status === 429) { // rate limited: wait as long as Spotify asks (up to two minutes), then try once more
-    const secs = Math.min(120, parseInt(r.headers.get('Retry-After') || '3', 10) || 3), wait = secs * 1000 + 200;
+    const secs = Math.min(opts.quick ? 6 : 120, parseInt(r.headers.get('Retry-After') || '3', 10) || 3), wait = secs * 1000 + 200;
     await new Promise(res => setTimeout(res, wait));
     r = await fetch('https://api.spotify.com/v1' + path, { ...opts, headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json', ...(opts.headers||{}) } });
   }
@@ -402,18 +412,16 @@ async function addAlbum(r, btn){
   if (albums.length >= SLOTS) { setStatus(`The cabinet is full (${SLOTS} records). Remove one first.`); return; }
   btn.disabled = true; btn.textContent = 'FETCHING…';
   setStatus(`Fetching "${r.title}"…`);
-  try {
-    const d = await api('/albums/' + r.id + '/tracks?limit=50');
-    const tracks = d.items.map(t => ({ title: t.name, uri: t.uri, preview: t.preview_url }));
-    const a = { id: r.id, uri: r.uri, title: r.title, artist: r.artist, cover: r.coverBig, year: r.year, tracks };
-    albums.push(a); sortAlbums(); save(); coverImage(a);
-    btn.textContent = 'ON SHELF';
-    setStatus(`"${a.title}" is in the cabinet now (${tracks.length} tracks).`);
-    renderShelf(); draw();
-  } catch (e) {
-    btn.disabled = false; btn.textContent = 'ADD';
-    setStatus('Could not fetch that album (' + e.message + ').');
+  let a;
+  try { a = await fetchAlbum(r.id, { quick: true }); if (!a.cover) a.cover = r.coverBig; }   // one album request brings title, cover and tracks… (no long waits when Spotify is throttling)
+  catch (e) {                                                             // …and if Spotify refuses it, the search result already has what the room needs
+    a = { id: r.id, uri: r.uri, title: r.title, artist: r.artist, cover: r.coverBig, year: r.year, tracks: [], partial: true };   // completed the next time it is picked
+    nowMessage(`Added from the search result; Spotify would not give details (${e.message}).`);
   }
+  if (albums.some(x => x.id === a.id)) { btn.textContent = 'ON SHELF'; return; }
+  albums.push(a); sortAlbums(); save(); coverImage(a);
+  btn.textContent = 'ON SHELF';
+  renderShelf(); draw();
 }
 
 /* ---------- shelf list ---------- */
@@ -456,8 +464,27 @@ function playCrackle(ms){
   } catch (e) {}
 }
 
+function playScratch(){ // the needle skidding across the record: a short burst of filtered noise sweeping down, with a thump at the end
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    if (!crackle.ctx) crackle.ctx = new AC();
+    const ac = crackle.ctx; if (ac.state === 'suspended') ac.resume();
+    const sr = ac.sampleRate, ms = 420, n = Math.floor(sr * ms / 1000), buf = ac.createBuffer(1, n, sr), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random()*2-1) * (0.6 + 0.4*Math.sin(i / sr * 2 * Math.PI * (60 - 40*i/n)));   // noise with a wobble that slows down
+    const src = ac.createBufferSource(); src.buffer = buf;
+    const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 2.5;
+    const t = ac.currentTime; bp.frequency.setValueAtTime(3200, t); bp.frequency.exponentialRampToValueAtTime(380, t + ms/1000);   // the skid sweeps downward
+    const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + ms/1000);
+    src.connect(bp); bp.connect(g); g.connect(ac.destination); src.start(t); src.stop(t + ms/1000 + 0.05);
+    const th = ac.createOscillator(), tg = ac.createGain(); th.type = 'sine'; th.frequency.setValueAtTime(90, t + 0.3); th.frequency.exponentialRampToValueAtTime(40, t + 0.5);   // the arm landing on its rest
+    tg.gain.setValueAtTime(0.0001, t + 0.3); tg.gain.exponentialRampToValueAtTime(0.35, t + 0.32); tg.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+    th.connect(tg); tg.connect(ac.destination); th.start(t + 0.3); th.stop(t + 0.6);
+    playCrackle(900);
+  } catch (e) {}
+}
+
 /* ---------- playback: Spotify Web Playback SDK (Premium), preview fallback ---------- */
-const player = { album: null, index: 0, audio: null, playing: false, mode: null, lastTrack: '' };
+const player = { album: null, index: 0, audio: null, playing: false, mode: null, lastTrack: '', sdkPaused: false, needsClick: false };
 /* ---------- whistling: starts at the earliest 30 s into the music, lasts 10–30 s, then a break ---------- */
 const whistle = { on: false, next: Infinity, until: 0 };
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -468,7 +495,7 @@ function whistleTick(now){
   else if (whistle.on && now >= whistle.until) { whistle.on = false; whistle.next = now + rnd(40000, 90000); }
 }
 const whistling = () => whistle.on && player.playing && scene.man.sitting && !talking() && !scene.doze;
-const sdk = { player: null, device: null, ready: null };
+const sdk = { player: null, device: null, ready: null, activated: false };
 const nowEl = document.getElementById('now');
 window.onSpotifyWebPlaybackSDKReady = () => { sdk.loaded = true; if (auth) initPlayer(); };
 function initPlayer(){
@@ -476,28 +503,37 @@ function initPlayer(){
   const p = new Spotify.Player({ name: 'Plattenstube', getOAuthToken: cb => token().then(t => cb(t)), volume: volume.level });
   sdk.ready = new Promise(res => p.addListener('ready', ({ device_id }) => { sdk.device = device_id; res(device_id); }));
   p.addListener('not_ready', () => { sdk.device = null; });
+  p.addListener('autoplay_failed', () => { sdk.activated = false; soundFailed(); });   // the browser refused to start the sound
+  sdk.watch = setInterval(watchSound, 1000);
   p.addListener('initialization_error', e => setStatus('Player error: ' + e.message));
   p.addListener('authentication_error', e => setStatus('Player auth error: ' + e.message));
   p.addListener('account_error', e => setStatus('Spotify Premium is needed for playback: ' + e.message));
   p.addListener('player_state_changed', st => {
     if (!st || !player.album) return;
     const t = st.track_window.current_track;
-    renderNow(player.album, t ? t.name : '', st.paused);
+    player.sdkPaused = st.paused; player.stateAt = performance.now();
+    if (player.playing && !st.paused) { player.stalled = 0; player.retried = false; }
+    renderNow(player.album, t ? t.name : '', st.paused && !player.playing);        // the panel shows what the room shows; a short stall while the sound comes through is not a pause
     if (st.paused && st.position === 0 && st.track_window.previous_tracks.length && !st.track_window.next_tracks.length) endOfSide();
   });
   p.connect();
   sdk.player = p;
 }
-function renderNow(a, trackName, paused){
-  nowEl.innerHTML = `<b></b><div class="track"></div><div style="color:var(--muted)"></div><button id="stop">${paused ? 'Play' : 'Stop'}</button>`;
+const stopBtn = document.getElementById('stop');
+stopBtn.onclick = () => togglePlayback();
+function renderNow(a, trackName, paused){ // the NOW PLAYING box: cover, title, track, artist; the Stop/Play button lives in the controls below
+  nowEl.innerHTML = `<div class="t"><b></b><div class="track"></div><div class="artist"></div></div>`;
   nowEl.querySelector('b').textContent = a.title;
   nowEl.querySelector('.track').textContent = (paused ? '⏸ ' : '▶ ') + (trackName || '');
-  nowEl.querySelector('div[style]').textContent = a.artist;
-  nowEl.querySelector('#stop').onclick = () => togglePlayback();
+  nowEl.querySelector('.artist').textContent = a.artist + (a.year ? ' · ' + a.year : '');
+  stopBtn.disabled = false; stopBtn.textContent = paused ? 'Play' : 'Stop';
   player.lastTrack = trackName;
 }
-async function startPlayback(a){
-  player.album = a; player.index = 0; player.playing = true; renderShelf(); whistleReset(); scene.playSince = scene.t; scene.doze = false;
+function nowMessage(text, bad){ nowEl.innerHTML = `<span style="color:var(--${bad ? 'bad' : 'muted'})">${text}</span>`; stopBtn.disabled = true; stopBtn.textContent = 'Stop'; }
+async function startPlayback(a, retry){
+  player.album = a; player.index = 0; player.playing = true; renderShelf(); whistleReset(); scene.playSince = scene.t; scene.doze = false; scene.dozed = false;
+  if (player.muted && sdk.player) { player.muted = false; sdk.player.setVolume(volume.level).catch(() => {}); }
+  player.since = performance.now(); if (!retry) { player.retried = false; player.stalled = 0; }
   renderNow(a, 'starting…', false);
   // 1) Full album through Spotify Connect (Premium)
   if (sdk.player) {
@@ -506,15 +542,18 @@ async function startPlayback(a){
       await sdk.player.activateElement();
       await api('/me/player/play?device_id=' + dev, { method: 'PUT', body: JSON.stringify({ context_uri: a.uri }) });
       player.mode = 'sdk';
-      setTimeout(async () => { // browsers block sound until the page has been clicked once: tell the listener, and resume on the first click
-        try { const st = await sdk.player.getCurrentState(); if (st && st.paused && player.playing && player.album === a) { player.needsClick = true; setStatus('Click anywhere in the room to let the music play.'); } } catch (e) {}
-      }, 2500);
-      return;
-    } catch (e) { setStatus('Spotify playback failed (' + e.message + '). Trying previews…'); }
+      if (!sdk.straightened) { // a record plays in order, start to finish: no shuffle, no repeat (once per visit, the setting sticks to the device)
+        sdk.straightened = true;
+        api('/me/player/shuffle?state=false&device_id=' + dev, { method: 'PUT' }).catch(() => { sdk.straightened = false; });
+        api('/me/player/repeat?state=off&device_id=' + dev, { method: 'PUT' }).catch(() => {});
+      }
+      return;                                                                       // from here on watchSound() keeps an eye on whether sound really comes
+    } catch (e) { player.lastError = e.message; }
   }
   // 2) 30-second previews, if Spotify provides any for this album
   if (a.tracks.some(t => t.preview)) { player.mode = 'preview'; playPreview(); return; }
-  player.mode = null;
+  if (sdk.player) { player.mode = 'sdk'; soundFailed(); return; }                   // the play command itself failed: same picture, the needle skids and the record stops
+  player.mode = 'failed'; player.sdkPaused = true;
   renderNow(a, 'No audio: Spotify Premium is needed to play this record.', true);
 }
 function playPreview(){
@@ -541,18 +580,40 @@ function audioPause(){ // arm lifted, record stays on
 }
 function audioResume(){ // arm lowered again
   const a = player.album; if (!a) return;
-  player.playing = true; whistleReset(); scene.playSince = scene.t;
+  player.playing = true; whistleReset(); scene.playSince = scene.t; player.since = performance.now(); player.retried = false;
   if (player.mode === 'preview' && player.audio) { player.audio.play().catch(() => {}); renderNow(a, player.lastTrack || '', false); }
-  else if (player.mode === 'sdk' && sdk.player) { sdk.player.resume().catch(() => startPlayback(a)); renderNow(a, player.lastTrack || '', false); }
+  else if (player.mode === 'sdk' && sdk.player) { sdk.player.resume().catch(() => startPlayback(a)); if (player.muted) { player.muted = false; sdk.player.setVolume(volume.level).catch(() => {}); } renderNow(a, player.lastTrack || '', false); }
   else startPlayback(a);
+}
+function soundFailed(){ // the record is on and the arm is down, but no sound is coming: the needle skids, the arm jumps back, the record stops. Play (a real click) starts it again
+  if (!player.playing) return;
+  player.needsClick = false; player.sdkPaused = true; player.retried = false;
+  playScratch();
+  scene.armDown = false; player.playing = false; scene.runout = 0; whistleReset();
+  if (sdk.player) sdk.player.pause().catch(() => {});
+  if (player.album) renderNow(player.album, player.lastTrack && !/starting/.test(player.lastTrack) ? player.lastTrack : '', true);   // no message: the lifted arm says it all
+}
+async function watchSound(){ // once a second: does Spotify actually play while the room thinks it does? if not, try the play command once more, then give up with a skid
+  if (player.mode !== 'sdk' || !player.playing || !sdk.player || scene.runout) return;
+  if (performance.now() - (player.since || 0) < 6000) return;                      // give a fresh start a few seconds to come through
+  let st = null; try { st = await sdk.player.getCurrentState(); } catch (e) {}
+  if (st && !st.paused) { player.stalled = 0; player.retried = false; return; }
+  if (!st) { // no state at all: the SDK does not know (yet) – only Spotify's own events can tell us it is paused
+    if (!(player.stateAt > player.since && player.sdkPaused)) { player.stalled = 0; return; }
+  }
+  player.stalled = (player.stalled || 0) + 1;
+  if (player.stalled < 4) return;
+  player.stalled = 0;
+  if (!player.retried && player.album) { player.retried = true; player.since = performance.now(); startPlayback(player.album, true); return; }   // once more, from the top
+  soundFailed();
 }
 function endOfSide(){ // the album ran out: the record keeps turning in the run-out groove for a while, then he gets up and lifts the arm
   if (!player.playing) return;
   player.playing = false; scene.runout = scene.t + 7000; playCrackle(6500);
   if (!busy()) {
     const steps = [{ type: 'until', test: () => scene.t >= scene.runout }];
-    standUp(steps); steps.push(...walkTo(POS.stand, POS.tt)); steps.push(wait(400, () => { scene.armDown = false; scene.runout = 0; audioPause(); }));
-    const others = albums.map((a, i) => i).filter(i => albums[i] !== scene.record);
+    const from = standUp(steps); steps.push(...walkTo(from, POS.tt)); steps.push(wait(400, () => { scene.armDown = false; scene.runout = 0; audioPause(); }));
+    const others = albums.filter(a => a !== scene.record);                              // random picks come from the cabinet only, never from the framed playlists
     if (others.length) { // then he puts that one away and picks another at random
       const next = others[Math.floor(Math.random()*others.length)];
       steps.push(wait(900, () => {}));
@@ -564,7 +625,7 @@ function endOfSide(){ // the album ran out: the record keeps turning in the run-
 }
 function stopPlayback(){ // record removed from the shelf while on the turntable
   audioStop(); scene.record = null; scene.armDown = false; scene.man.hold = null;
-  nowEl.innerHTML = '<span style="color:var(--muted)">Record removed.</span>';
+  nowMessage('Record removed.');
 }
 
 /* ---------- scene / animation ---------- */
@@ -664,7 +725,9 @@ function moodTick(now){
   lamp.glow += ((lamp.on ? 1 : 0) - lamp.glow) * (1 - Math.exp(-dt / 1800));             // the lamp warms up and fades down
 }   // the cat's cushion, in front of the armchair just off the rug
 const LEAFR = i => i === 1 ? 6 : 4;                      // how far the leaves reach beyond the pot
+const NICHE = { x: -12, y: 34, w: 12, d: 44, h: 26 };          // the window niche: a recess 12 deep cut into the left wall, its floor 26 up — a seat with cushions, the window at its back
 const OBST = [
+  { x0: 0, y0: NICHE.y+4, x1: 12, y1: NICHE.y+13, pad: 5 },                          // the pile of books on the floor under the window
   { x0: 0, y0: TTPOS.y, x1: TTPOS.x+36, y1: TTPOS.y+30, pad: 10 },                 // record player table (closed off to the wall)
   { x0: CHAIRPOS.x-6, y0: CHAIRPOS.y-4, x1: CHAIRPOS.x+28, y1: CHAIRPOS.y+26, pad: 10 }, // armchair
   { x0: LAMP.x-2, y0: LAMP.y-2, x1: LAMP.x+6, y1: LAMP.y+6, pad: 8 },                       // floor lamp
@@ -746,9 +809,9 @@ const busy = () => !!(anim.cur || anim.queue.length);
 function returnLegs(from, steps){
   const a = scene.record, m = scene.man;
   if (!a) return from;
-  const idx = albums.indexOf(a), shelf = idx >= 0 ? shelfPosFor(idx) : null;
+  const shelf = recordSpot(a);
   steps.push(...walkTo(from, POS.tt));
-  steps.push(wait(400, () => { scene.armDown = false; audioStop(); nowEl.innerHTML = '<span style="color:var(--muted)">Putting the record back…</span>'; }));
+  steps.push(wait(400, () => { scene.armDown = false; audioStop(); nowMessage('Putting the record back…'); }));
   steps.push(wait(400, () => { scene.record = null; m.hold = a; }));
   if (shelf) { steps.push(...walkTo(POS.tt, shelf)); steps.push(wait(400, () => { m.hold = null; a.taken = false; })); return shelf; }
   steps.push(wait(100, () => { m.hold = null; }));
@@ -761,27 +824,185 @@ function standUp(steps){
   steps.push(wait(300, () => { scene.doze = false; }));                       // dozed off? he wakes first
   steps.push(wait(900, () => {}));                                           // ... and no hurry
   steps.push(wait(300, () => { m.sitting = false; m.x = POS.stand.x; m.y = POS.stand.y; }));
+  if (reading.book) { // whatever calls him away, the book goes back to its place first; he carries on from there
+    const b = reading.book, spot = bookSpot(b); reading.book = null;
+    steps.push(...walkTo(POS.stand, spot));
+    steps.push(wait(500, () => { b.taken = false; m.holdBook = null; }));
+    return spot;
+  }
   return POS.stand;
 }
 function dozeTick(now){ // late in a long album he dozes off; any action wakes him, and so does the end of the side
   if (scene.doze) { if ((!player.playing && !scene.runout && !busy()) || now > scene.dozeUntil) scene.doze = false; return; }
-  if (player.playing && scene.manIn && scene.man.sitting && !busy() && !her.visible && now - scene.playSince > 9*60000 && drinkPhase(now) < 0 && Math.random() < 0.002) { scene.doze = true; scene.dozeUntil = now + 30000 + Math.random()*90000; }   // a nap of half a minute to two minutes
+  if (player.playing && scene.manIn && scene.man.sitting && !busy() && !her.visible && !reading.book && !scene.dozed && now - scene.playSince > 9*60000 && drinkPhase(now) < 0 && Math.random() < 0.002) { scene.doze = true; scene.dozed = true; scene.dozeUntil = now + 30000 + Math.random()*90000; }   // one nap per record at most   // a nap of half a minute to two minutes
 }
 function sitDown(from, steps){ const m = scene.man; steps.push(...walkTo(from, POS.stand)); steps.push(wait(200, () => { m.x = SEAT.x; m.y = SEAT.y; m.sitting = true; m.facing = 1; })); }
 
-function selectAlbum(i){
-  const a = albums[i]; if (!a || busy() || !scene.manIn) return;
+/* ---------- three records framed on the left wall, left of the window: playlists, part of the room rather than of the cabinet ---------- */
+const WALL_PLACEHOLDER = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAABXElEQVR4nO2aMW6EMBBFB4QQotgaUXCEVDlDytQp0B5h6xwmFcrJUkScAKGtUsxmNEuxYMYKY+X/Zp+slbCxn8ZYzp5eLmVVExERXecpOc6eX98p5eT8c50naUqLk5+BQq+noR+JqO2a76+RW7wx5+3jJH0uhDjnz4aIiBrV5ouHftR9vnOg7Ro6ek2vMndS2m8D4DHxTOnxOWRZTtye6/HpOHnfq5wvHJA4ed+rDAfggJHhABwIZTjgjOEAHDAyHIADoQwHnHEhYyqrWhyQf2xhPsvYF32+sPG52oGyqiM4YIndgbtzIZ3Qefg9j9kaPW+hz9IczQFLDq4DlrioA5Y4qgOWuKgDlsCBlB2IVgcs9fhf14EIe6Ed+xkLx98L/THje8AZ45sYDhgZDsCBUIYDzhgOwAEjwwE4EMpwwBknf2+0WIxp6EcP1ysfX7vUfc5wd/rgJO9A8jPwA0gD+uYVBscxAAAAAElFTkSuQmCC';
+const FRAMED = [ // a 3×3 wall of framed playlists left of the window: 12×12 sleeves on the wall x = 0, hung at y0..y0+12, z0..z0+12 (rows top to bottom, columns from the window outwards)
+  { id: '5pRVZjSojPtG9xX35DZ72n', uri: 'spotify:playlist:5pRVZjSojPtG9xX35DZ72n', title: 'Mezclilla', artist: 'Conceptuosos', year: '2015', cover: WALL_PLACEHOLDER, tracks: [], trackCount: 130, wall: true, y0: 98, z0: 96 },
+  { id: '1t4ayKzIzCfpBW0NJ7gZR5', uri: 'spotify:playlist:1t4ayKzIzCfpBW0NJ7gZR5', title: 'Silver stripes of sound', artist: 'Daniel Klöck', year: '2015', cover: 'https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da847d762b97ea722e284a818ef7', tracks: [], trackCount: 58, wall: true, y0: 120, z0: 96 },
+  { id: '2nXctcrK51Dgb1Q1Spqf9r', uri: 'spotify:playlist:2nXctcrK51Dgb1Q1Spqf9r', title: 'Tres Tres Chic', artist: 'Daniel Klöck', year: '2014', cover: 'https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da84749549e95118d23084277d4f', tracks: [], trackCount: 74, wall: true, y0: 142, z0: 96 },
+  { id: '46tqRxoSJVkReQMqH9dgYV', uri: 'spotify:playlist:46tqRxoSJVkReQMqH9dgYV', title: 'Emoji Cultist', artist: 'Daniel Klöck', year: '2025', cover: 'https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da84a7662947320976db4d1e6963', tracks: [], trackCount: 62, wall: true, y0: 98, z0: 74 },
+  { id: '7MKTRoYi9E2TzgomxU6in6', uri: 'spotify:playlist:7MKTRoYi9E2TzgomxU6in6', title: 'Desayuno Delux', artist: 'Daniel Klöck', year: '2024', cover: 'https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da84288e50f4a6a62e39c77e9d14', tracks: [], trackCount: 28, wall: true, y0: 120, z0: 74 },
+  { id: '540gkEVIay1lnCblha7v5c', uri: 'spotify:playlist:540gkEVIay1lnCblha7v5c', title: 'Mr Turnip', artist: 'Daniel Klöck', year: '2021', cover: 'https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da8475a28c3e277ed869ebdc288e', tracks: [], trackCount: 79, wall: true, y0: 142, z0: 74 },
+  { id: '6CZblsOBYjrr5eBKbsON4E', uri: 'spotify:playlist:6CZblsOBYjrr5eBKbsON4E', title: 'High contranst', artist: 'Daniel Klöck', year: '2022', cover: 'https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da842264e98455b2ca0890db9101', tracks: [], trackCount: 114, wall: true, y0: 98, z0: 52 },
+  { id: '68FNN9JgW90Dljw2EaKslh', uri: 'spotify:playlist:68FNN9JgW90Dljw2EaKslh', title: 'Psychedelicate', artist: 'Daniel Klöck', year: '2019', cover: 'https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da845bb052cc2147b2d69dc29d49', tracks: [], trackCount: 96, wall: true, y0: 120, z0: 52 },
+  { id: '0eKukIMvjCKdS3HOMDAstX', uri: 'spotify:playlist:0eKukIMvjCKdS3HOMDAstX', title: 'Never enough', artist: 'Daniel Klöck', year: '2018', cover: 'https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da8414a6e2944def46d2655cc3f6', tracks: [], trackCount: 54, wall: true, y0: 142, z0: 52 },
+  { id: '3cuvSWXU19IOEhXVOKFhJy', uri: 'spotify:playlist:3cuvSWXU19IOEhXVOKFhJy', title: 'Next in line', artist: 'Daniel Klöck', year: '2019', cover: 'https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da84225d15004cd43c7fb4190e7e', tracks: [], trackCount: 109, wall: true, y0: 98, z0: 30 },
+  { id: '75Mp3XLOJr1ookgPrlbGft', uri: 'spotify:playlist:75Mp3XLOJr1ookgPrlbGft', title: 'Lazy Wednesday', artist: 'Daniel Klöck', year: '2019', cover: 'https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da8441d3f2d1a5ce147475025ebb', tracks: [], trackCount: 89, wall: true, y0: 120, z0: 30 },
+  { id: '2vmhEXufNRFNJx6eCH8BsB', uri: 'spotify:playlist:2vmhEXufNRFNJx6eCH8BsB', title: 'Driving Borders', artist: 'Daniel Klöck', year: '2023', cover: 'https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da84b7e1568978b5704a3e7bd104', tracks: [], trackCount: 84, wall: true, y0: 142, z0: 30 },
+];
+const allRecords = () => albums.concat(FRAMED);
+/* ---------- books around the room: hover for the details, click and he reads it in his chair for a while ---------- */
+const BOOKS = [ // spot: niche (standing in a row on the window seat), floor (a pile on the floor below the window), cabinet / cabinet2 (two stacks on top), plant (a pile by the big plant)
+  { title: 'Nada', quote: "Primero, ingenuos recuerdos, sueños, luchas, mi propio presente vacilante, y luego, agudas alegrías, tristezas, desesperación, una crispación importante de la vida y un anegarse en la nada.", author: 'Carmen Laforet', spot: 'niche' },
+  { title: 'Hurra', quote: "Mamá dijo en una ocasión que no conoces el amor hasta que cumples los treinta, porque no se puede ver la luz sin oscuridad. Yo le dije que, en ausencia de una profunda oscuridad, la luz más débil se vuelve oscura. Por eso todo el mundo tiene problemas.", author: 'Ben Brooks', spot: 'niche' },
+  { title: 'Primeval and Other Times', quote: "And he who has once seen the world's borders will suffer his imprisonment most painfully of all.", author: 'Olga Tokarczuk', spot: 'niche' },
+  { title: 'Los señores del té', quote: "Quería quedarse allí para siempre, en ese abrazo de la selva virgen. Aquél era el lugar donde le aguardaba toda una realidad aún por vivir.", author: 'Hella S. Haasse', spot: 'niche' },
+  { title: 'Die Freiheit, frei zu sein', quote: "Revolutions always appear to succeed with amazing ease in their initial stages, and the reason is that those who supposedly “make” revolutions do not “seize power” but rather pick it up where it lies in the streets.", author: 'Hannah Arendt', spot: 'floor' },
+  { title: 'The Bricks that Built the Houses', quote: "They're driving past the streets, the shops, the corners where they made themselves. Every ghost is out there, staring. Bad skin and sunken eyes, grinning at them from the past.", author: 'Kae Tempest', spot: 'floor' },
+  { title: 'Hocus Pocus', quote: "Any form of government, not just Capitalism, is whatever people who have all our money, drunk or sober, sane or insane, decide to do today.", author: 'Kurt Vonnegut', spot: 'floor' },
+  { title: 'Citizen Vince', quote: "And that's when he left, excused himself, and now here he is, alone, staring at his face in the mirror, trying to remember when he was simply himself, before he was a collection of disappointing polling numbers and failed ideas, of weaknesses.", author: 'Jess Walter', spot: 'floor' },
+  { title: 'The Hotel New Hampshire', quote: "Lilly was not crazy. She left a serious suicide note. 'Sorry,' said the note. 'Just not big enough.'", author: 'John Irving', spot: 'cabinet' },
+  { title: 'Lo que queda del día', quote: "La verdad siempre nos llega casualmente, a través de algún acontecimiento externo.", author: 'Kazuo Ishiguro', spot: 'cabinet' },
+  { title: 'Pferde stehlen', quote: "Wir wollen sie nicht wirklich stehlen, wir wollen sie nur ein wenig reiten. Aber wir nennen es stehlen, das klingt spannender.", author: 'Per Petterson', spot: 'cabinet2' },
+  { title: 'No Longer Human', quote: "I am afraid because I can so clearly foresee my own life rotting away of itself, like a leaf that rots without falling, while I pursue my round of existence from day to day.", author: 'Osamu Dazai', spot: 'cabinet2' },
+  { title: 'Luz de febrero', quote: "Su vida se hinchaba tras ella como una red de pesca, repleta de toda clase de algas inútiles y pedazos rotos de conchas, y de todos aquellos peces centelleantes y diminutos.", author: 'Elizabeth Strout', spot: 'plant' },
+  { title: 'La historia interminable', quote: "Algunos piensan que su única esperanza de felicidad radica en ser otra persona, y pasan toda su vida viajando de un lugar a otro.", author: 'Michael Ende', spot: 'plant' },
+  { title: 'The Blind Owl', quote: "There are sores which slowly erode the mind in solitude like a kind of canker.", author: 'Sadegh Hedayat', spot: 'plant' },
+];
+const BOOK_COLORS = [[146,62,52],[58,84,112],[196,160,84],[74,98,70],[120,70,110],[190,110,70],[80,110,130],[160,80,80],[90,120,90],[200,150,110],[70,70,100],[150,120,60],[110,80,60],[60,100,110],[170,90,120],[100,100,70],[130,60,70]];
+BOOKS.forEach((b, i) => { b.book = true; b.color = BOOK_COLORS[i % BOOK_COLORS.length]; b.tracks = []; b.taken = false; });
+function bookSpot(b){ // where he stands to take a book, or to put it back
+  const p = b.spot === 'niche' ? { x: 12, y: NICHE.y+30 } : b.spot === 'floor' ? { x: 16, y: NICHE.y+22 } : b.spot === 'cabinet' ? { x: CAB.x+104, y: CAB.y+CAB.d+16 } : b.spot === 'cabinet2' ? { x: CAB.x+62, y: CAB.y+CAB.d+16 } : { x: PLANTS[1][0]-16, y: PLANTS[1][1]+22 };
+  if (!blocked(p.x, p.y)) return p; const [gx, gy] = snap(p); return { x: gx*STEP, y: gy*STEP };
+}
+function bookPlace(b){ // the book's spot in the room: [x, y, z, w, d, h] of its block, and how it lies
+  const k = BOOKS.filter(x => x.spot === b.spot).indexOf(b);
+  if (b.spot === 'niche') return { x: NICHE.x+0.4+2.7*k, y: NICHE.y+1.5, z: NICHE.h+2.2, w: 2.6, d: 9.5, h: 13 - (k % 3) * 0.8, standing: true };   // four fat books; the rest went down to the pile on the floor   // a row across the near end of the seat, spines facing the room like the records
+  if (b.spot === 'floor') return { x: 1+(k%2)*1.5, y: NICHE.y+4, z: k*3.6, w: 13-k, d: 9, h: 3.6 };                                                // a pile on the floor under the window
+  if (b.spot === 'cabinet2') return { x: CAB.x+54+(k%2)*1.5, y: CAB.y+6, z: CAB.h+3+k*3.6, w: 14-k, d: 10, h: 3.6 };
+  if (b.spot === 'cabinet') return { x: CAB.x+96+(k%2)*1.5, y: CAB.y+6, z: CAB.h+3+k*3.6, w: 15-k, d: 10, h: 3.6 };                                 // flat piles: all books share the same front line, so every spine shows
+  if (b.spot === 'plant') { const [px, py] = PLANTS[1]; return { x: px-16+(k%2)*1.5, y: py+4, z: k*3.6, w: 13-k, d: 9, h: 3.6 }; }
+  return { x: 0, y: 0, z: 0, w: 1, d: 1, h: 1 };
+}
+function drawBook(b){ // a closed book: cover block with the pages showing; standing books show their spine
+  if (b.taken) return;
+  const q = bookPlace(b), c = b.color, hov = hover === b;
+  const lift = hov && q.standing ? 1.2 : 0;                                     // a standing book rises a little when pointed at…
+  if (hov && !q.standing) { q.y += 1.8; }                                        // …a lying one is pulled forward out of its pile by its spine, towards the room
+  if (q.standing) { // like the records in the cabinet: only the thin spine faces the room, with a small label band
+    box(q.x, q.y, q.z+lift, q.w, q.d, q.h, c, {top:0.9});
+    box(q.x+0.25, q.y+q.d-0.2, q.z+lift+q.h*0.55, q.w-0.5, 0.2, 1.6, [241,228,200]);   // the label band on the spine
+    return;
+  }
+  if (q.open) { box(q.x, q.y, q.z+lift, q.w, q.d, q.h, c); box(q.x+0.3, q.y+0.3, q.z+lift+q.h, q.w-0.6, q.d-0.6, 0.5, [244,238,222]); box(q.x+q.w/2-0.15, q.y+0.3, q.z+lift+q.h+0.5, 0.3, q.d-0.6, 0.2, [196,186,166]); return; }   // lying open, pages up
+  box(q.x, q.y, q.z+lift, q.w, q.d, q.h, c, {top:1.05});
+  box(q.x+q.w*0.3, q.y+q.d-0.2, q.z+lift+q.h*0.3, q.w*0.4, 0.2, q.h*0.4, [241,228,200]);    // label band on the spine (the face towards the room)
+  box(q.x+q.w-0.6, q.y+0.5, q.z+lift+0.4, 0.6, q.d-1, q.h-0.8, [232,222,196]);             // pages, on the side
+}
+function bookAt(mx, my){ // which book is under the pointer (screen box around its block)
+  for (const b of BOOKS) {
+    if (b.taken) continue;
+    const q = bookPlace(b), yf = q.y + q.d;                                      // the spine is the face towards the room (+y), for standing and lying books alike
+    const c = [P(q.x, yf, q.z), P(q.x+q.w, yf, q.z), P(q.x+q.w, yf, q.z+q.h), P(q.x, yf, q.z+q.h)];
+    ctx.beginPath(); c.forEach((p,i) => i ? ctx.lineTo(p[0],p[1]) : ctx.moveTo(p[0],p[1])); ctx.closePath();
+    if (ctx.isPointInPath(mx, my) || ctx.isPointInPath(mx, my+1) || ctx.isPointInPath(mx, my-1)) return b;
+  }
+  return null;
+}
+let bookInfo = {}; try { bookInfo = JSON.parse(localStorage.getItem('plattenstube.books2') || '{}'); } catch (e) {}
+(async () => { // books.json next to the page carries year and cover (as embedded images) for every book, so nothing is looked up at runtime
+  try {
+    const r = await fetch('books.json', { cache: 'no-store' }); if (!r.ok) return;
+    const d = await r.json();
+    BOOKS.forEach(b => { const e = d[b.title + '|' + b.author]; if (e) { if (e.cover) b.cover = e.cover; if (e.year) b.year = e.year; if (e.isbn) b.isbn = e.isbn; } });
+    if (hover && hover.book) renderPick();
+  } catch (e) {}
+})();
+async function saveBookData(){ // owner: look every book up, fetch its cover, and download books.json for the server
+  const btn = document.getElementById('savebooks'); btn.disabled = true;
+  const out = {};
+  for (const b of BOOKS) {
+    btn.textContent = `books… ${Object.keys(out).length + 1}/${BOOKS.length}`;
+    if (!b.cover) { delete bookInfo[b.title + '|' + b.author]; b.cover = undefined; b.looked = false; lookupBook(b); for (let i = 0; i < 150 && !b.looked; i++) await new Promise(r => setTimeout(r, 100)); }
+    let cover = b.cover || null;
+    if (cover && !cover.startsWith('data:')) { // embed the image
+      try { const blob = await fetch(cover).then(r => r.ok ? r.blob() : null); if (blob && blob.size > 500) cover = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(blob); }); else cover = null; }
+      catch (e) { cover = null; }
+    }
+    out[b.title + '|' + b.author] = { title: b.title, author: b.author, year: b.year || '', isbn: b.isbn || '', cover };
+  }
+  const blob = new Blob([JSON.stringify(out)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'books.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  const missing = Object.values(out).filter(e => !e.cover).map(e => e.title);
+  btn.disabled = false; btn.textContent = missing.length ? `save book data (no cover: ${missing.join(', ')})` : 'save book data (all covers found)';
+}
+function lookupBook(b){ // cover and year from Open Library, once, remembered in this browser
+  const key = b.title + '|' + b.author;
+  if (b.cover !== undefined) return;
+  if (bookInfo[key]) { Object.assign(b, bookInfo[key]); b.looked = true; renderPick(); return; }
+  b.cover = null;
+  const remember = info => { Object.assign(b, info); b.looked = true; bookInfo[key] = info; try { localStorage.setItem('plattenstube.books2', JSON.stringify(bookInfo)); } catch (e) {} if (hover === b) renderPick(); };
+  if (b.isbn) { remember({ cover: `https://covers.openlibrary.org/b/isbn/${b.isbn}-M.jpg`, year: b.year || '' }); return; }   // an ISBN pins the edition
+  const tries = [ // several ways of asking Open Library, until one comes back with a cover
+    'title=' + encodeURIComponent(b.title) + '&author=' + encodeURIComponent(b.author),
+    'title=' + encodeURIComponent(b.title),
+    'q=' + encodeURIComponent(b.title + ' ' + b.author),
+  ];
+  (async () => {
+    let year = '';
+    for (const t of tries) {
+      try {
+        const d = await fetch('https://openlibrary.org/search.json?' + t + '&limit=8&fields=cover_i,first_publish_year,author_name').then(r => r.json());
+        const docs = (d.docs || []).filter(x => !x.author_name || x.author_name.some(n => n.toLowerCase().includes(b.author.split(' ').pop().toLowerCase())));   // same surname at least
+        if (!year && docs[0] && docs[0].first_publish_year) year = String(docs[0].first_publish_year);
+        const hit = docs.find(x => x.cover_i);
+        if (hit) { remember({ cover: `https://covers.openlibrary.org/b/id/${hit.cover_i}-M.jpg`, year: year || (hit.first_publish_year ? String(hit.first_publish_year) : '') }); return; }
+      } catch (e) {}
+    }
+    remember({ cover: null, year });
+  })();
+}
+/* he reads: fetches the book, settles in the chair with it for a while, then puts it back */
+const reading = { book: null, until: 0, start: 0 };
+function readBook(b){
+  if (!b || busy() || !scene.manIn || b.taken) return;                          // (a book he is already reading goes back first: standUp sees to that)
+  const m = scene.man, steps = [], spot = bookSpot(b);
+  const from = standUp(steps);
+  steps.push(...walkTo(from, spot));
+  steps.push(wait(500, () => { b.taken = true; m.holdBook = b; }));
+  sitDown(spot, steps);
+  steps.push(wait(300, () => { reading.book = b; reading.start = scene.t; reading.until = scene.t + 120000 + Math.random()*120000; }));
+  anim.queue = steps;
+}
+function readTick(now){ // the book goes back when he has read enough
+  if (!reading.book) return;
+  if (busy() || !scene.man.sitting || now < reading.until) return;
+  const steps = [], from = standUp(steps);                                     // standUp takes the book back to its place
+  sitDown(from, steps);
+  anim.queue = steps;
+}
+function recordSpot(a){ // where he stands to take a record, or to put it back
+  if (a.wall) { const p = { x: 14, y: a.y0 + 6 }; if (!blocked(p.x, p.y)) return p; const [gx, gy] = snap(p); return { x: gx*STEP, y: gy*STEP }; }
+  const i = albums.indexOf(a); return i >= 0 ? shelfPosFor(i) : null;
+}
+function selectAlbum(i){ selectRecord(albums[i]); }
+function selectRecord(a){
+  if (!a || busy() || !scene.manIn) return;
   if (a === scene.record) { if (!player.playing) togglePlayback(); return; } // already on the turntable: just start it again
   const steps = [];
   let at = standUp(steps);
   at = returnLegs(at, steps);                 // the record that is on goes back to its slot first
-  fetchLegs(i, at, steps);
+  fetchLegs(a, at, steps);
   sitDown(POS.tt, steps);
   anim.queue = steps;
   setStatus(`Putting on "${a.title}"…`);
 }
-function fetchLegs(i, at, steps){ // from `at`: walk to spine i, take it, carry it to the player, put it on and start it; ends at the player
-  const a = albums[i], m = scene.man, shelf = shelfPosFor(i);
+function fetchLegs(a, at, steps){ // from `at`: walk to the record, take it, carry it to the player, put it on and start it; ends at the player
+  const m = scene.man, shelf = recordSpot(a);
   steps.push(...walkTo(at, shelf));
   steps.push(wait(500, () => { m.hold = a; a.taken = true; ensureAlbum(a); }));           // (details, if the file had only the id)
   steps.push(...walkTo(shelf, POS.tt));
@@ -811,8 +1032,8 @@ function volumeTick(now){
   if (!volume.due || now < volume.due || volume.trip || !scene.manIn) return;
   volume.due = 0; volume.trip = true;
   const steps = [];
-  standUp(steps);                                                                                     // (after anything already queued, he is back in his chair)
-  steps.push(...walkTo(POS.stand, POS.tt));
+  const from = standUp(steps);                                                                        // (after anything already queued, he is back in his chair)
+  steps.push(...walkTo(from, POS.tt));
   steps.push(wait(300, () => { scene.man.facing = -1; volume.atPlayer = true; applyVolume(volume.wanted); volume.stayUntil = scene.t + VOL_GRACE; volHint.hidden = true; }));
   steps.push({ type: 'until', test: () => scene.t > volume.stayUntil });                               // waits there in case you adjust again
   steps.push(wait(300, () => { volume.atPlayer = false; volume.trip = false; }));
@@ -829,14 +1050,10 @@ function enterRoom(){
 }
 function firstRecord(from, pause = 0){ // he picks a record at random, puts it on and settles into the chair
   const m = scene.man, steps = pause ? [wait(pause, () => {})] : [];
-  if (albums.length) {
-    const i = Math.floor(Math.random() * albums.length), a = albums[i], shelf = shelfPosFor(i);
-    steps.push(...walkTo(from, shelf));
-    steps.push(wait(500, () => { m.hold = a; a.taken = true; ensureAlbum(a); }));
-    steps.push(...walkTo(shelf, POS.tt));
-    steps.push({ type: 'until', test: () => !!(a.uri || a.failed) });
-    steps.push(wait(400, () => { m.hold = null; scene.record = a; }));
-    steps.push(wait(500, () => { scene.armDown = true; playCrackle(3200); startPlayback(a); }));
+  const pool = albums;                                                          // a random record from the cabinet (the playlists on the wall are picked by hand only)
+  if (pool.length) {
+    const a = pool[Math.floor(Math.random() * pool.length)];
+    fetchLegs(a, from, steps);
     sitDown(POS.tt, steps);
   } else sitDown(from, steps);
   anim.queue = steps;
@@ -844,9 +1061,9 @@ function firstRecord(from, pause = 0){ // he picks a record at random, puts it o
 function leaveRoom(){ // logged out: everybody out, nothing on the turntable
   document.getElementById('disconnect').disabled = false;
   scene.manIn = false; her.visible = false; her.anim.queue = []; her.anim.cur = null;
-  anim.queue = []; anim.cur = null; scene.record = null; scene.armDown = false; albums.forEach(b => { b.taken = false; });
+  anim.queue = []; anim.cur = null; scene.record = null; scene.armDown = false; allRecords().forEach(b => { b.taken = false; });
   scene.man.sitting = true; scene.man.x = SEAT.x; scene.man.y = SEAT.y; scene.man.hold = null;
-  nowEl.innerHTML = '<span style="color:var(--muted)">Nothing yet. Pick a record from the cabinet.</span>';
+  nowMessage('Nothing yet. Pick a record from the cabinet.');
 }
 function lampTick(now){ // once the room looks noticeably dim he gets up and switches the lamp on; in the morning, once it is clearly light, he switches it off
   if (!scene.manIn || !scene.man.sitting || busy() || lamp.trip) return;                   // independent of her: she takes her own way through the room
@@ -854,8 +1071,8 @@ function lampTick(now){ // once the room looks noticeably dim he gets up and swi
   if (want === lamp.on) return;
   lamp.trip = true;
   const steps = [];
-  standUp(steps);
-  steps.push(...walkTo(POS.stand, LAMP.standAt));
+  const from = standUp(steps);
+  steps.push(...walkTo(from, LAMP.standAt));
   steps.push(wait(700, () => { scene.man.facing = -1; }));
   steps.push(wait(500, () => { lamp.on = want; }));
   steps.push(wait(600, () => { lamp.trip = false; }));
@@ -866,9 +1083,14 @@ function lampTick(now){ // once the room looks noticeably dim he gets up and swi
 function togglePlayback(){ // tap on the record player or the panel button: walk over, lift or lower the arm, sit back down
   if (busy()) return;
   if (!scene.record) { setStatus('Nothing on the turntable. Pick a record from the cabinet.'); return; }
+  if (!player.playing && sdk.player) { // this click is the browser's permission for the sound: unlock and start the player right here, muted, then the lowered arm turns the volume up
+    sdk.activated = true;
+    sdk.player.activateElement().catch(() => { sdk.activated = false; });
+    if (player.mode === 'sdk' && player.album) { player.muted = true; sdk.player.setVolume(0).catch(() => {}); sdk.player.resume().catch(() => {}); }
+  }
   const steps = [];
-  standUp(steps);
-  steps.push(...walkTo(POS.stand, POS.tt));
+  const from = standUp(steps);
+  steps.push(...walkTo(from, POS.tt));
   if (player.playing) steps.push(wait(400, () => { scene.armDown = false; audioPause(); }));
   else steps.push(wait(400, () => { scene.armDown = true; playCrackle(2200); audioResume(); }));
   sitDown(POS.tt, steps);
@@ -928,7 +1150,7 @@ function stepAnim(now){ runQueue(scene.man, anim, now); }
 
 /* ---------- her: comes in through the door now and then ---------- */
 const her = { x: -14, y: 156, bob: 0, facing: 1, visible: false, hold: null, act: null, crouch: 0, reach: 0, blow: 0, pose: null, anim: { cur: null, queue: [], start: 0 }, next: 50000 + Math.random()*60000, candleNext: 0 };
-const HER_SPOTS = { edge: { x: 172, y: 64 }, cat: { x: 120, y: 160 }, talk: { x: 140, y: 118 }, read: { x: 30, y: 44 }, candle: { x: TTPOS.x+30, y: TTPOS.y+30+10 } }; // she appears at the open right edge of the floor
+const HER_SPOTS = { edge: { x: 172, y: 64 }, cat: { x: 120, y: 160 }, talk: { x: 140, y: 118 }, read: { x: 12, y: 48 }, candle: { x: TTPOS.x+30, y: TTPOS.y+30+10 } }; // she appears at the open right edge of the floor
 const talk = { until: 0, start: 0 };             // the two of them chatting after she brought the tea
 const talking = () => scene.t < talk.until;
 const speaker = () => Math.floor((scene.t - talk.start) / 1700) % 2 === 0 ? 'her' : 'him';   // they take turns
@@ -945,11 +1167,8 @@ document.querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
   else if (t === 'crackle') playCrackle(3200);
   else if (t.startsWith('her-')) herRequest = t.slice(4);
 });
-document.getElementById('next').onclick = () => { // anyone: he puts the current record away and picks another at random
-  const others = albums.map((a, i) => i).filter(i => albums[i] !== scene.record);
-  if (!others.length || busy() || !scene.manIn) return;
-  selectAlbum(others[Math.floor(Math.random() * others.length)]);
-};
+document.getElementById('next').onclick = playRandom;
+document.getElementById('savebooks').onclick = saveBookData;
 document.getElementById('reload').onclick = () => { albums = []; save(); location.reload(); };   // owner: drop this browser's cabinet and load collection.json afresh
 function herTick(now){
   if (her.visible) { runQueue(her, her.anim, now); if (!her.anim.cur && !her.anim.queue.length) { her.visible = false; her.act = null; her.next = now + 70000 + Math.random()*110000; } return; }
@@ -962,7 +1181,7 @@ function herTick(now){
   q.push(wait(2000, () => {}));                                                        // appears at the edge, pauses, then sets off
   if (pick === 'read') {
     q.push(...herWalkTo(d, HER_SPOTS.read));
-    q.push(wait(500, () => { her.pose = 'read'; her.x = 26; her.y = CAB.y + CAB.d + 7; }));   // sits down on the floor, back against the left end of the cabinet
+    q.push(wait(500, () => { her.pose = 'read'; her.x = -5; her.y = NICHE.y + 23; }));        // climbs into the niche and settles with her back to the jamb
     q.push(wait(25000 + Math.random()*25000, () => {}));                                // reads
     q.push(wait(500, () => { her.pose = null; her.x = HER_SPOTS.read.x; her.y = HER_SPOTS.read.y; }));
     q.push(...herWalkTo(HER_SPOTS.read, d));
@@ -992,7 +1211,7 @@ function herTick(now){
 }
 
 /* ---------- rain on the window (plane x=0, y 72..118, z 62..103) ---------- */
-const WIN = { y0:72, y1:118, z0:62, z1:103 };
+const WIN = { x:-12, y0:36, y1:76, z0:30, z1:110 };              // the window pane is at the back of the niche                     // a tall window, towards the back corner; the record wall hangs to its left
 const rain = { falling: [], sliding: [], lastT: 0 };
 function updateRain(now){
   const dt = Math.min(50, now - (rain.lastT || now)); rain.lastT = now;
@@ -1020,7 +1239,7 @@ function px(y, z, w, h, fill){ // one "pixel" rectangle on the window plane
 }
 function drawRain(){
   ctx.save();
-  ctx.beginPath(); const c = [P(0,WIN.y0,WIN.z0),P(0,WIN.y1,WIN.z0),P(0,WIN.y1,WIN.z1),P(0,WIN.y0,WIN.z1)];
+  ctx.beginPath(); const c = [P(WIN.x,WIN.y0,WIN.z0),P(WIN.x,WIN.y1,WIN.z0),P(WIN.x,WIN.y1,WIN.z1),P(WIN.x,WIN.y0,WIN.z1)];
   ctx.moveTo(c[0][0],c[0][1]); c.slice(1).forEach(p => ctx.lineTo(p[0],p[1])); ctx.closePath(); ctx.clip();
   for (const d of rain.falling) for (let i=0;i<d.len;i++) px(d.y - i*0.12, d.z + i, 1, 1, i ? 'rgba(170,195,220,.35)' : 'rgba(210,228,245,.8)');
   for (const d of rain.sliding) {
@@ -1056,20 +1275,29 @@ function drawRoom(){
   poly([P(0,0,0),P(0,170,0),P(0,170,6),P(0,0,6)], shade(WOODD,.9));
   poly([P(0,0,0),P(180,0,0),P(180,0,6),P(0,0,6)], shade(WOODD,.75));
   // window on left wall
-  poly([P(0,70,60),P(0,120,60),P(0,120,105),P(0,70,105)], '#2c3540');
+  const Wx = WIN.x, Wy0 = WIN.y0, Wy1 = WIN.y1, Wz0 = WIN.z0, Wz1 = WIN.z1, PLY = WOOD;         // the niche is lined with the same wood as the cabinet
+  nicheClip(() => { // the niche: an opening in the wall; everything inside it is seen only through that opening
+    const { y, d, h } = NICHE, top = WIN.z1 + 4, D = -NICHE.x;
+    poly([P(-D,y,h),P(-D,y+d,h),P(-D,y+d,top),P(-D,y,top)], shade(PLY, 0.85));           // back panel
+    poly([P(-D,y,h),P(0,y,h),P(0,y,top),P(-D,y,top)], shade(PLY, 0.72));                  // the reveal we can see
+    poly([P(-D,y,h),P(0,y,h),P(0,y+d,h),P(-D,y+d,h)], shade(PLY, 1.1));                  // the seat
+  poly([P(Wx,Wy0-2,Wz0-2),P(Wx,Wy1+2,Wz0-2),P(Wx,Wy1+2,Wz1+2),P(Wx,Wy0-2,Wz1+2)], '#2c3540');
   { const k = mood.dark, g = mood.glow, day = [74,94,115], dusk = [44,62,112], night = [14,16,26];   // grey afternoon -> blue dusk -> black night (eased)
     const base = k < 0.5 ? day.map((v,i) => v + (dusk[i]-v) * k*2) : dusk.map((v,i) => v + (night[i]-v) * (k-0.5)*2);
     const col = c => `rgb(${c.map(v=>v|0).join(',')})`;
-    poly([P(0,72,62),P(0,118,62),P(0,118,103),P(0,72,103)], col(base));
+    poly([P(Wx,Wy0,Wz0),P(Wx,Wy1,Wz0),P(Wx,Wy1,Wz1),P(Wx,Wy0,Wz1)], col(base));
     if (g > 0.01) { // sunset / sunrise: the sky goes orange low down and pink higher up, over the grey-blue
       const top = [214,118,142], bottom = [238,146,78], mix = (a, b, t) => a.map((v,i) => v + (b[i]-v)*t);
       const bands = 6;
-      for (let i = 0; i < bands; i++) { const z0 = 62 + (103-62)*i/bands, z1 = 62 + (103-62)*(i+1)/bands, t = 1 - i/(bands-1);
+      for (let i = 0; i < bands; i++) { const z0 = Wz0 + (Wz1-Wz0)*i/bands, z1 = Wz0 + (Wz1-Wz0)*(i+1)/bands, t = 1 - i/(bands-1);
         const c = mix(base, mix(top, bottom, t), g * (0.55 + 0.35*t));
-        poly([P(0,72,z0),P(0,118,z0),P(0,118,z1),P(0,72,z1)], col(c)); } } }
+        poly([P(Wx,Wy0,z0),P(Wx,Wy1,z0),P(Wx,Wy1,z1),P(Wx,Wy0,z1)], col(c)); } } }
   drawRain();
-  poly([P(0,94,62),P(0,97,62),P(0,97,103),P(0,94,103)], '#2c3540');
-  poly([P(0,72,82),P(0,118,82),P(0,118,84),P(0,72,84)], '#2c3540');
+  { const ym = (Wy0+Wy1)/2;                                                                 // mullions: one upright, three across → eight panes, as tall as the record wall
+    poly([P(Wx,ym-1.5,Wz0),P(Wx,ym+1.5,Wz0),P(Wx,ym+1.5,Wz1),P(Wx,ym-1.5,Wz1)], '#2c3540');
+    for (let k = 1; k < 4; k++) { const z = Wz0 + (Wz1-Wz0)*k/4; poly([P(Wx,Wy0,z-1),P(Wx,Wy1,z-1),P(Wx,Wy1,z+1),P(Wx,Wy0,z+1)], '#2c3540'); } }
+  });
+  drawWallRecords();
   // floor planks
   for (let x=0;x<180;x+=12) poly([P(x,0,0),P(x+12,0,0),P(x+12,170,0),P(x,170,0)], shade((x/12)%2?FLOOR:FLOOR2,1));
   // rug
@@ -1078,6 +1306,34 @@ function drawRoom(){
   poly([P(66,96,0),P(134,96,0),P(134,134,0),P(66,134,0)], '#7a3e3a');
 }
 
+function drawWallRecords(){ // three sleeves in thick wooden frames, one above the other on the left wall; an empty frame stays while one is on the turntable
+  for (const w of FRAMED) {
+    const { y0, z0 } = w, S = 12, T = 2.5, D = 2;                                                     // sleeve size, frame width, how far the frame stands out from the wall
+    const q = (y, z) => P(0, y, z);
+    poly([q(y0+S, z0+S), q(y0, z0+S), q(y0, z0), q(y0+S, z0)], shade(WOODD, 0.9));                       // wooden backing, seen while the sleeve is away
+    if (!w.taken) {
+      const img = coverImage(w), [sx, sy] = q(y0+S, z0+S);
+      ctx.save(); ctx.transform(1, -0.5, 0, 1, sx, sy);                                                // image x runs along the wall, image y down the wall
+      if (img.complete && img.naturalWidth) { try { ctx.drawImage(img, 0, 0, S, S); } catch (e) { ctx.fillStyle = w.color || '#888'; ctx.fillRect(0, 0, S, S); } }
+      else { ctx.fillStyle = w.color || '#888'; ctx.fillRect(0, 0, S, S); }
+      ctx.restore();
+    }
+    box(0, y0-T, z0+S, D, S+2*T, T, WOOD, {top:1.08});                                                  // top bar
+    box(0, y0-T, z0-T, D, S+2*T, T, WOOD, {top:1.08});                                                  // bottom bar
+    box(0, y0-T, z0, D, T, S, WOOD);                                                                    // near side bar
+    box(0, y0+S, z0, D, T, S, WOOD);                                                                    // far side bar
+  }
+}
+function wallAt(mx, my){ // which framed record is under the pointer
+  for (const w of FRAMED) {
+    if (w.taken) continue;
+    const { y0, z0 } = w, S = 12, [x0,yy0] = P(0, y0+S, z0+S), [x1,yy1] = P(0, y0, z0+S), [x3,yy3] = P(0, y0+S, z0);
+    const ux=x1-x0, uy=yy1-yy0, vx=x3-x0, vy=yy3-yy0, det=ux*vy-uy*vx;
+    const u=((mx-x0)*vy-(my-yy0)*vx)/det, v=((my-yy0)*ux-(mx-x0)*uy)/det;
+    if (u>=0&&u<=1&&v>=0&&v<=1) return w;
+  }
+  return null;
+}
 function drawCabinet(){
   const {x,y,w,d,h} = CAB;
   box(x,y,0,w,d,h, WOOD);
@@ -1096,7 +1352,7 @@ function drawCabinet(){
     const yy = fy + out, z0 = s.z, z1 = s.z + s.h;
     const col = a.color || fallbackColor(a.id);
     // top edge (slightly lit) and front of the spine
-    if (out) poly([P(s.x,fy,z1),P(s.x+s.w,fy,z1),P(s.x+s.w,yy,z1),P(s.x,yy,z1)], 'rgba(255,255,255,.5)');
+    if (out) poly([P(s.x,fy,z1),P(s.x+s.w,fy,z1),P(s.x+s.w,yy,z1),P(s.x,yy,z1)], col);   // the top edge shows as it slides out
     poly([P(s.x,yy,z0),P(s.x+s.w,yy,z0),P(s.x+s.w,yy,z1),P(s.x,yy,z1)], col);
     ctx.fillStyle = 'rgba(0,0,0,.25)'; // dark edge left
     poly([P(s.x,yy,z0),P(s.x+0.6,yy,z0),P(s.x+0.6,yy,z1),P(s.x,yy,z1)], 'rgba(0,0,0,.3)');
@@ -1105,21 +1361,11 @@ function drawCabinet(){
     const lz = z0 + s.h*0.55;
     poly([P(s.x+0.6,yy,lz),P(s.x+s.w-0.6,yy,lz),P(s.x+s.w-0.6,yy,lz+5),P(s.x+0.6,yy,lz+5)], 'rgba(241,228,200,.85)');
     poly([P(s.x+1,yy,lz+2),P(s.x+s.w-1,yy,lz+2),P(s.x+s.w-1,yy,lz+3),P(s.x+1,yy,lz+3)], 'rgba(0,0,0,.5)');
-    if (a === hover) poly([P(s.x-1,yy,z0-1),P(s.x+s.w+1,yy,z0-1),P(s.x+s.w+1,yy,z1+1),P(s.x-1,yy,z1+1)], 'rgba(229,162,74,.3)');
   }
   // top trim; on top of the cabinet: a tiny plant, a stack of books and a small table lamp
   box(x-2,y-2,h,w+4,d+4,3, WOOD, {top:1.1});
   box(x+20,y+8,h+3,8,8,6,POT); box(x+22,y+10,h+9,4,4,8,LEAF); box(x+19,y+9,h+13,5,5,3,LEAF2);
-  { // books lying flat, each a little offset, pages showing on the near sides
-    const books = [[14,10,2.6,[146,62,52]],[13,9.5,2.2,[58,84,112]],[12,10,2.8,[196,160,84]],[11,9,2,[74,98,70]]];
-    let z = h+3, bx = x+98, by = y+6;
-    books.forEach(([bw,bd,bh,col],i) => { const ox = bx + (i%2)*1.5, oy = by + (i===1?1:i===3?-0.5:0);
-      box(ox,oy,z,bw,bd,bh,col,{top:1.05});                                  // cover
-      box(ox+0.5,oy+bd-0.6,z+0.4,bw-1,0.6,bh-0.8,[232,222,196]);             // pages, front
-      box(ox+bw-0.6,oy+0.5,z+0.4,0.6,bd-1,bh-0.8,[232,222,196]);             // pages, side
-      z += bh; });
-    box(bx+7,by+5,z,2,2,0.5,[120,100,70]);                                   // a bookmark ribbon end on top
-  }
+  BOOKS.filter(b => b.spot === 'cabinet' || b.spot === 'cabinet2').forEach(drawBook);   // two stacks of books on top
   { // small table lamp at the right end, lit together with the floor lamp
     const lx = x+118, ly = y+8, gl = lamp.glow, mix = (a, b) => a.map((v, i) => v + (b[i] - v) * gl);
     box(lx+2,ly+2,h+3,6,6,1.4,[62,48,36]);                                   // foot
@@ -1243,6 +1489,34 @@ function catAwake(){
   return awake;
 }
 function drawCat(){ drawCushion(); drawCatBody(CATPOS.x, CATPOS.y, 4, catAwake()); }
+function nicheClip(fn){ // draw only what shows through the niche's opening in the wall
+  const { y, d, h } = NICHE, top = WIN.z1 + 4, c = [P(0,y,h),P(0,y+d,h),P(0,y+d,top),P(0,y,top)];
+  ctx.save(); ctx.beginPath(); c.forEach((p,i) => i ? ctx.lineTo(p[0],p[1]) : ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.clip();
+  fn(); ctx.restore();
+}
+function drawNiche(){ nicheClip(drawNicheInside); }
+function drawNicheInside(){ // on the seat: a long blue cushion, two small ones, and the row of books at the far end
+  const { x, y, w, d, h } = NICHE, PLY = WOOD;
+  box(x+0.5, y+1, h, w-1, d-2, 2.2, [52,96,140], {top:1.08});               // long blue cushion filling the seat
+  box(x+1, y+d-9, h+2.2, 6, 5, 2.4, [120,150,90], {top:1.1});               // a small green cushion at the far end
+  box(x+2, y+11.5, h+2.2, 8, 4, 3.5, [226,222,210], {top:1.1});             // a striped cushion propped against the books: her backrest
+  for (let k = 0; k < 4; k++) box(x+2, y+12+k*0.9, h+5.7, 8, 0.4, 0.3, [150,150,160]);
+  box(-1, y-1, h-1.5, 1, d+2, 1.5, PLY, {top:1.05});                        // the sill's lip at the front edge
+  BOOKS.filter(b => b.spot === 'niche').forEach(drawBook);
+}
+const bubbleEl = document.getElementById('bubble');
+function drawQuote(){ // while he reads, a line from the book floats in a speech bubble above him for half a minute (an HTML box over the room, so the text is crisp at any size)
+  const b = reading.book, since = b ? scene.t - reading.start : 0, from = 4000, dur = 30000;
+  const show = b && b.quote && scene.man.sitting && since >= from && since <= from + dur;
+  if (!show) { if (!bubbleEl.hidden) { bubbleEl.style.opacity = 0; if (bubbleEl.dataset.book) { bubbleEl.dataset.book = ''; setTimeout(() => { if (!bubbleEl.dataset.book) bubbleEl.hidden = true; }, 500); } } return; }
+  if (bubbleEl.dataset.book !== b.title) { bubbleEl.querySelector('.txt').textContent = b.quote; bubbleEl.dataset.book = b.title; bubbleEl.hidden = false; bubbleEl.style.opacity = 0; requestAnimationFrame(() => { bubbleEl.style.opacity = 1; }); }
+  const r = canvas.getBoundingClientRect(), st = canvas.parentElement.getBoundingClientRect(), sx = r.width / W, sy = r.height / H;
+  const [hx, hy] = P(scene.man.x+8, scene.man.y, 50), px = (r.left - st.left) + hx*sx, py = (r.top - st.top) + hy*sy + Math.sin(scene.t/900)*3;
+  const bw = bubbleEl.offsetWidth, bh = bubbleEl.offsetHeight, stW = st.width;
+  const left = Math.round(Math.min(stW - bw - 6, Math.max(6, px - bw*0.6))), top = Math.round(py - bh - 18);
+  bubbleEl.style.left = left + 'px'; bubbleEl.style.top = top + 'px';
+  bubbleEl.style.setProperty('--tail', Math.round(Math.min(bw - 30, Math.max(12, px - left - 7))) + 'px');
+}
 function drawChair(){ // everything that sits behind the person: plinth, base, cushions, backrest, far arm
   const {x,y} = CHAIRPOS;
   box(x-6,y-4,0,34,30,3,CHAIRDARK);          // plinth
@@ -1252,38 +1526,39 @@ function drawChair(){ // everything that sits behind the person: plinth, base, c
   box(x-1,y+2,9,24,2,14,CUSH,{front:0.9});   // back cushion
   box(x-6,y+2,9,5,24,8,CHAIR);               // far arm
 }
-function drawHerReading(x, y, t){ // sitting on the floor with her back to the left end of the cabinet, knees up, book on her lap
+function drawHerReading(x, y, t){ // sitting on the window seat with her back against the jamb, knees up, book on her lap
   const HAIR = [196,160,104], HAIR2 = [172,138,86], SWEAT = [236,230,218], SWEAT2 = [214,206,192], TROU = [34,32,36], SOCK = [118,118,122], SHOE = [172,132,88];
-  const bx = her.x - 5, by = CAB.y + CAB.d + 0.5;               // seat against the cabinet front
-  box(bx-1,by,0,13,9,4,TROU);                                               // seat
-  box(bx+1,by+8,4,4,6,4,TROU); box(bx+6.5,by+8,4,4,6,4,TROU);             // thighs, knees drawn up toward the room
-  box(bx+1,by+12,0,4,4,9,TROU); box(bx+6.5,by+12,0,4,4,9,TROU);           // shins
-  box(bx+1,by+12,0,4,4,1.6,SOCK); box(bx+6.5,by+12,0,4,4,1.6,SOCK);       // socks
-  box(bx+1,by+12,0,4,5,2.4,SHOE); box(bx+6.5,by+12,0,4,5,2.4,SHOE);       // sneakers flat on the floor
+  const bx = NICHE.x + 1, by = NICHE.y + 15, Z = NICHE.h + 2.2;  // on the cushion, lengthwise along the seat, her back against the striped cushion and the books
+  const B = (x, y, z, w, d, h, c, o) => box(x, y, z + Z, w, d, h, c, o), Q = (x, y, z) => P(x, y, z + Z);   // everything lifted onto the cushion
+  B(bx-1,by,0,13,9,4,TROU);                                               // seat
+  B(bx+1,by+8,4,4,6,4,TROU); B(bx+6.5,by+8,4,4,6,4,TROU);             // thighs, knees drawn up toward the room
+  B(bx+1,by+12,0,4,4,9,TROU); B(bx+6.5,by+12,0,4,4,9,TROU);           // shins
+  B(bx+1,by+12,0,4,4,1.6,SOCK); B(bx+6.5,by+12,0,4,4,1.6,SOCK);       // socks
+  B(bx+1,by+12,0,4,5,2.4,SHOE); B(bx+6.5,by+12,0,4,5,2.4,SHOE);       // sneakers flat on the floor
   const breath = Math.sin(t / 2000) * 0.4;
-  box(bx,by,4,11,9,13+breath,SWEAT);                                        // torso leaning on the cabinet
-  poly([P(bx+1,by+9,11),P(bx+10,by+9,11),P(bx+10,by+9,15),P(bx+5.5,by+11,13.5),P(bx+1,by+9,15)], shade(SWEAT,0.93));
-  box(bx-2,by+2,8,3,5,8,SWEAT2); box(bx+10,by+2,8,3,5,8,SWEAT2);           // upper arms down the sides
-  box(bx-1,by+6,8,3,6,3,SWEAT2); box(bx+9,by+6,8,3,6,3,SWEAT2);            // forearms forward to the book
-  box(bx-0.5,by+10.5,8,3,3,3,[232,196,164]); box(bx+8.5,by+10.5,8,3,3,3,[232,196,164]); // hands either side of the book
+  B(bx,by,4,11,9,13+breath,SWEAT);                                        // torso leaning on the cabinet
+  poly([Q(bx+1,by+9,11),Q(bx+10,by+9,11),Q(bx+10,by+9,15),Q(bx+5.5,by+11,13.5),Q(bx+1,by+9,15)], shade(SWEAT,0.93));
+  B(bx-2,by+2,8,3,5,8,SWEAT2); B(bx+10,by+2,8,3,5,8,SWEAT2);           // upper arms down the sides
+  B(bx-1,by+6,8,3,6,3,SWEAT2); B(bx+9,by+6,8,3,6,3,SWEAT2);            // forearms forward to the book
+  B(bx-0.5,by+10.5,8,3,3,3,[232,196,164]); B(bx+8.5,by+10.5,8,3,3,3,[232,196,164]); // hands either side of the book
   const flip = (t % 6000) < 220 ? 1 : 0;                                    // a page turning now and then
-  box(bx+2.2,by+9,8.4,6.6,4.8,0.9,[88,52,40]);                               // book lying open on her knees, cover underneath
-  box(bx+2.5,by+9.3,9.3,6,4.2,0.5,[244,238,222]);                            // the two open pages, seen from above
-  box(bx+5.35,by+9.3,9.8,0.3,4.2,0.25,[196,186,166]);                        // the fold in the middle
-  if (flip) box(bx+5.3,by+9.4,9.8,0.4,4,3.2,[252,248,236]);                  // a page standing up as she turns it
+  B(bx+2.2,by+9,8.4,6.6,4.8,0.9,[88,52,40]);                               // book lying open on her knees, cover underneath
+  B(bx+2.5,by+9.3,9.3,6,4.2,0.5,[244,238,222]);                            // the two open pages, seen from above
+  B(bx+5.35,by+9.3,9.8,0.3,4.2,0.25,[196,186,166]);                        // the fold in the middle
+  if (flip) B(bx+5.3,by+9.4,9.8,0.4,4,3.2,[252,248,236]);                  // a page standing up as she turns it
   const hx = bx + 1, hy = by, hz = 17 + breath;
-  box(hx-1.5,hy-1.5,hz-6,12,7,15,HAIR2);                                    // hair down the back and sides
-  box(hx,hy,hz,9,9,9,[232,196,164]);                                        // face
-  box(hx-1,hy-1,hz+8,11,11,2.5,HAIR,{top:1.05});
-  box(hx-1,hy+8,hz+5.5,2.5,2.5,4.5,HAIR); box(hx+7.5,hy+8,hz+5.5,2.5,2.5,4.5,HAIR);
-  box(hx+2,hy+8.6,hz+3.6,1.4,0.6,0.5,[82,138,92]); box(hx+5.6,hy+8.6,hz+3.6,1.4,0.6,0.5,[82,138,92]); // eyes lowered to the page
-  box(hx+3,hy+8.6,hz+2,3,0.6,0.7,[196,120,110]);                            // smile
+  B(hx-1.5,hy-1.5,hz-6,12,7,15,HAIR2);                                    // hair down the back and sides
+  B(hx,hy,hz,9,9,9,[232,196,164]);                                        // face
+  B(hx-1,hy-1,hz+8,11,11,2.5,HAIR,{top:1.05});
+  B(hx-1,hy+8,hz+5.5,2.5,2.5,4.5,HAIR); B(hx+7.5,hy+8,hz+5.5,2.5,2.5,4.5,HAIR);
+  B(hx+2,hy+8.6,hz+3.6,1.4,0.6,0.5,[82,138,92]); B(hx+5.6,hy+8.6,hz+3.6,1.4,0.6,0.5,[82,138,92]); // eyes lowered to the page
+  B(hx+3,hy+8.6,hz+2,3,0.6,0.7,[196,120,110]);                            // smile
 }
 function drawHer(){
   if (!her.visible) return;
   const x = her.x-6, y = her.y-6, z = her.bob, t = scene.t;
   const HAIR = [196,160,104], HAIR2 = [172,138,86], SWEAT = [236,230,218], SWEAT2 = [214,206,192], TROU = [34,32,36], SOCK = [118,118,122], SHOE = [172,132,88];
-  if (her.pose === 'read') { drawHerReading(x, y, t); return; }
+  if (her.pose === 'read') { nicheClip(() => drawHerReading(x, y, t)); return; }
   const cr = her.crouch;                                        // 1 = crouching down to the cat
   const legH = 10 - 4*cr, torsoZ = z + legH;
   box(x+2.5,y+2,z+3,3.6,8,legH-3,TROU); box(x+7,y+2,z+3,3.6,8,legH-3,TROU); // wide black trousers
@@ -1325,6 +1600,7 @@ function drawChairArm(){ // the near arm, layered in front of whoever sits in th
 const drink = { start: null, next: 20000 + Math.random()*20000 };           // a sip is a state, not a clock: it only starts when he is settled
 function drinkPhase(t){ return drink.start === null ? -1 : Math.min(1, (t - drink.start) / 3600); } // 0..1 during a sip, else -1
 function drinkTick(t){
+  if (reading.book) return;                                                                 // no tea while he reads
   if (drink.start !== null) { if (t - drink.start >= 3600) { drink.start = null; drink.next = t + 30000 + Math.random()*25000; } return; }
   if (scene.manIn && scene.man.sitting && !busy() && !scene.doze && t >= drink.next) drink.start = t;      // never while a walk is queued, never asleep
 }
@@ -1358,7 +1634,14 @@ function drawMan(){
     armSit(x-3, y, z + breath);                // far arm, drawn before the torso
     box(x,y-6,z+7+breath,14,12,18,CARD);       // torso (knit sweater), leaning on the back cushion
     for (let k=0;k<3;k++) box(x+2+k*4,y+5.7,z+9+breath,1,0.5,12,CARD2); // knit ribs
-    if (dp < 0) armSit(x+14, y, z + breath);   // near arm resting, drawn after the torso
+    if (dp < 0 && !m.holdBook) armSit(x+14, y, z + breath);   // near arm resting, drawn after the torso
+    if (m.holdBook && m.sitting) { // reading: both forearms up, the book open in front of his chest, a page turning now and then
+      const b = m.holdBook, bz = z+15+breath, flip = (t % 7000) < 240;
+      box(x+13.5,y+2,z+9+breath,3,5,8,CARD2); box(x+11,y+6,bz-1,5,6,3,CARD2); box(x+9.5,y+10,bz-0.5,3,3,3,SKIN);          // near arm bent up to the book
+      box(x+2,y+9.5,bz-0.6,10,5,1,b.color); box(x+2.4,y+9.8,bz+0.4,9.2,4.4,0.5,[244,238,222]); box(x+6.85,y+9.8,bz+0.9,0.3,4.4,0.25,[196,186,166]);
+      if (flip) box(x+6.8,y+9.9,bz+0.9,0.4,4.2,3,[252,248,236]);
+      box(x+1,y+10,bz-0.5,3,3,3,SKIN);                                                                                      // far hand holding the other side
+    }
     const dz = scene.doze ? -1.2 : 0, dx = scene.doze ? 1.5 : 0;             // dozing: head sinks and tilts to the side
     head(x+2+sway*0.6+dx,y-4,z+25+breath+Math.abs(sway)*0.4+dz);
     if (scene.doze) { ctx.fillStyle = '#f1e4c8'; ctx.font = '9px VT323'; for (let i=0;i<2;i++){ const ph=(t/1800 + i/2)%1; const [nx,ny]=P(x+14,y-2,44+ph*16); ctx.globalAlpha=0.9*(1-ph); ctx.fillText('z', nx+ph*5, ny); } ctx.globalAlpha = 1; }
@@ -1420,7 +1703,7 @@ function head(x,y,z){
   box(x-0.5,y+10,z+9,11,4,0.8,HAT);           // curved brim, front only
   box(x+4,y+10.1,z+9.5,2,0.6,1.2,[96,70,46]); // small dark logo on the front
 }
-let hover = null;
+let hover = null, hoverTop = false;                             // hoverTop: the pointer rests on the cabinet top, where a click picks a record at random (no label, just the pointer cursor)
 function draw(){
   ctx.imageSmoothingEnabled = false;
   drawRoom();
@@ -1429,6 +1712,9 @@ function draw(){
   const m = scene.man;
   const manBox = m.sitting ? { x0: m.x+1, y0: m.y+1, x1: m.x+13, y1: m.y+18 } : { x0: m.x-6, y0: m.y-6, x1: m.x+6, y1: m.y+6 };
   const items = [
+    { box: { x0: NICHE.x, y0: NICHE.y, x1: NICHE.x+NICHE.w, y1: NICHE.y+NICHE.d }, f: drawNiche, niche: true },
+    { box: { x0: PLANTS[1][0]-14, y0: PLANTS[1][1]+4, x1: PLANTS[1][0]-2, y1: PLANTS[1][1]+12 }, f: () => BOOKS.filter(b => b.spot === 'plant').forEach(drawBook) },
+    { box: { x0: 0, y0: NICHE.y+4, x1: 13, y1: NICHE.y+13 }, f: () => BOOKS.filter(b => b.spot === 'floor').forEach(drawBook) },
     { box: { x0: TTPOS.x, y0: TTPOS.y, x1: TTPOS.x+36, y1: TTPOS.y+32 }, f: drawTurntable },
     { box: { x0: LAMP.x-3, y0: LAMP.y-3, x1: LAMP.x+7, y1: LAMP.y+7 }, f: drawLamp },
     ...PLANTS.map(([x,y],i) => ({ box: { x0: x-LEAFR(i), y0: y-LEAFR(i), x1: x+10+LEAFR(i), y1: y+10+LEAFR(i) }, f: () => drawPlant(x, y, i === 1), plantFront: i !== 0, plantBack: i === 0 })),
@@ -1440,6 +1726,8 @@ function draw(){
   ];
   // a is in front of b when a lies entirely at larger x or larger y (both axes point toward the viewer)
   const inFront = (a, b) => {
+    if (a.her && her.pose === 'read' && b.niche) return true;   // reading on the window seat: in front of it
+    if (b.her && her.pose === 'read' && a.niche) return false;
     if (a.man && m.sitting && b.chair) return true;   // sitting: always on the seat, in front of the backrest
     if (b.man && m.sitting && a.chair) return false;
     if ((a.man || a.her) && b.plantFront) return false;   // the two plants near the rug are always in front of the people
@@ -1467,6 +1755,7 @@ function draw(){
     ctx.fillStyle = '#5a4632'; ctx.fillRect(x0, y0, w, 3);
     ctx.fillStyle = '#e5a24a'; ctx.fillRect(x0, y0, Math.round(w * volume.level), 3);
   }
+  drawQuote();
   // music notes while playing: from the record player, and from him whistling along in the chair
   if (whistling()) {
     const m = scene.man;
@@ -1482,7 +1771,7 @@ function draw(){
   // evening: the room darkens and the lamp carries the mood with a warm pool of light
   const dk = mood.dark, gl = lamp.glow;
   if (mood.glow > 0.01) { // low sun through the window: a faint warm wash over the room, strongest near the window
-    const [wx, wy] = P(0, 95, 82); const g = ctx.createRadialGradient(wx, wy, 10, wx, wy, 260);
+    const [wx, wy] = P(WIN.x, (WIN.y0+WIN.y1)/2, (WIN.z0+WIN.z1)/2); const g = ctx.createRadialGradient(wx, wy, 10, wx, wy, 260);
     g.addColorStop(0, `rgba(255,150,80,${0.22*mood.glow})`); g.addColorStop(1, `rgba(255,150,80,${0.06*mood.glow})`);
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   }
@@ -1521,16 +1810,35 @@ function setHover(a){ if (hover === a) return; hover = a; renderPick(); shelfEl.
 const pickEl = document.getElementById('pick');
 function renderPick(){
   const a = hover;
-  if (!a) { pickEl.innerHTML = '<div class="pick-empty">Hover a spine in the cabinet to see which record it is. Click to put it on.</div>'; return; }
+  if (!a) { pickEl.innerHTML = '<div class="pick-empty">Hover a record or a book to see what it is. Click a record and he puts it on.</div>'; return; }
   pickEl.innerHTML = '<img alt=""><div class="t"><b></b><span></span><span></span></div>';
-  pickEl.querySelector('img').src = a.cover;
+  const img = pickEl.querySelector('img'); if (a.cover) img.src = a.cover; else if (a.book) { img.style.background = `rgb(${a.color.join(',')})`; }
   pickEl.querySelector('b').textContent = a.title;
-  const sp = pickEl.querySelectorAll('span'); sp[0].textContent = a.artist + (a.year ? ' · ' + a.year : ''); sp[1].textContent = a.tracks.length + ' tracks';
+  const sp = pickEl.querySelectorAll('span');
+  if (a.book) { sp[0].textContent = a.author + (a.year ? ' · ' + a.year : ''); sp[1].textContent = 'book'; return; }
+  sp[0].textContent = a.artist + (a.year ? ' · ' + a.year : ''); sp[1].textContent = (a.trackCount || a.tracks.length) + ' tracks' + (a.wall ? ' · playlist' : '');
 }
 function onTurntable(mx, my){ // screen-space test against the plinth top (a bit enlarged)
   const pts = [P(TTPOS.x-2,TTPOS.y-2,27),P(TTPOS.x+38,TTPOS.y-2,27),P(TTPOS.x+38,TTPOS.y+32,27),P(TTPOS.x-2,TTPOS.y+32,27)];
   ctx.beginPath(); pts.forEach((p,i) => i ? ctx.lineTo(p[0],p[1]) : ctx.moveTo(p[0],p[1])); ctx.closePath();
   return ctx.isPointInPath(mx, my);
+}
+function onCabinetTop(mx, my){ // the top face of the cabinet
+  const {x,y,w,d,h} = CAB, pts = [P(x-2,y-2,h+3),P(x+w+2,y-2,h+3),P(x+w+2,y+d+2,h+3),P(x-2,y+d+2,h+3)];
+  ctx.beginPath(); pts.forEach((p,i) => i ? ctx.lineTo(p[0],p[1]) : ctx.moveTo(p[0],p[1])); ctx.closePath();
+  return ctx.isPointInPath(mx, my);
+}
+function playRandom(){ // he puts the current record away and picks another at random (the framed ones on the wall included)
+  const others = albums.filter(a => a !== scene.record);                        // cabinet only, no playlists
+  if (!others.length || busy() || !scene.manIn) return;
+  selectRecord(others[Math.floor(Math.random() * others.length)]);
+}
+function onSleeve(mx, my){ // the sleeve leaning against the record player's table (the record that is on)
+  if (!scene.record) return false;
+  const {x, y} = TTPOS, [sx, sy] = P(x+5, y+30.6, 15), m = [1, 0.5, -0.22, 1.08];       // same transform as when it is drawn: p = origin + u*(a,b) + v*(c,d), u,v in 0..15
+  const det = m[0]*m[3] - m[2]*m[1], dx = mx - sx, dy = my - sy;
+  const u = (dx*m[3] - m[2]*dy) / det, v = (m[0]*dy - m[1]*dx) / det;
+  return u >= 0 && u <= 15 && v >= 0 && v <= 15;
 }
 function onMug(mx, my){ // the mug standing on the armrest
   if (drinkPhase(scene.t) >= 0) return false;
@@ -1538,10 +1846,13 @@ function onMug(mx, my){ // the mug standing on the armrest
   return Math.abs(mx - sx) <= 4 && Math.abs(my - sy) <= 5;
 }
 function sipNow(){ if (scene.man.sitting && !busy() && drinkPhase(scene.t) < 0) { drink.start = scene.t; setStatus('A sip of tea.'); } }
-canvas.addEventListener('mousemove', e => { const [x,y]=canvasPos(e); const i=slotAt(x,y); setHover(i>=0?albums[i]:null); canvas.style.cursor = (i>=0 || onTurntable(x,y) || onMug(x,y)) ? 'pointer' : 'default'; });
-canvas.addEventListener('mouseleave', () => setHover(null));
-document.addEventListener('pointerdown', () => { if (player.needsClick && sdk.player) { player.needsClick = false; sdk.player.activateElement().then(() => sdk.player.resume()).catch(() => {}); setStatus(''); } }, { passive: true });
-canvas.addEventListener('click', e => { if (!scene.manIn) return; const [x,y]=canvasPos(e); const i=slotAt(x,y); if (i>=0) selectAlbum(i); else if (onMug(x,y)) sipNow(); else if (onTurntable(x,y)) togglePlayback(); });
+canvas.addEventListener('mousemove', e => { const [x,y]=canvasPos(e); const i=slotAt(x,y), w = i < 0 ? wallAt(x,y) : null, bk = i < 0 && !w ? bookAt(x,y) : null, sl = i < 0 && !w && !bk && onSleeve(x,y); setHover(i>=0?albums[i]:(w || bk || (sl ? scene.record : null))); if (bk) lookupBook(bk); const top = i < 0 && !w && !bk && onCabinetTop(x,y); hoverTop = top; canvas.style.cursor = (i>=0 || w || bk || top || onTurntable(x,y) || onMug(x,y)) ? 'pointer' : 'default'; });
+canvas.addEventListener('mouseleave', () => { setHover(null); hoverTop = false; });
+document.addEventListener('pointerdown', () => { // browsers only let the player make sound after a tap: use the first one to unlock it, and resume if a record was waiting for that
+  if (!sdk.player) return;
+  if (!sdk.activated) { sdk.activated = true; sdk.player.activateElement().catch(() => { sdk.activated = false; }); }
+}, { passive: true });
+canvas.addEventListener('click', e => { if (!scene.manIn) return; const [x,y]=canvasPos(e); const i=slotAt(x,y); const w = i < 0 ? wallAt(x,y) : null, bk = i < 0 && !w ? bookAt(x,y) : null; if (i>=0) selectAlbum(i); else if (w) selectRecord(w); else if (bk) readBook(bk); else if (onCabinetTop(x,y)) playRandom(); else if (onMug(x,y)) sipNow(); else if (onTurntable(x,y)) togglePlayback(); });
 
 function loop(now){
   scene.t = now;
@@ -1550,6 +1861,7 @@ function loop(now){
   volumeTick(now);
   lampTick(now);
   dozeTick(now);
+  readTick(now);
   moodTick(now);
   updateRain(now);
   whistleTick(now);
