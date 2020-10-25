@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
 <title>Plattenstube</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=VT323&display=swap">
 <style>
@@ -844,7 +845,7 @@ const FRAMED = [ // a 3×3 wall of framed playlists left of the window: 12×12 s
   { id: '5pRVZjSojPtG9xX35DZ72n', uri: 'spotify:playlist:5pRVZjSojPtG9xX35DZ72n', title: 'Mezclilla', artist: 'Conceptuosos', year: '2015', cover: WALL_PLACEHOLDER, tracks: [], trackCount: 130, wall: true, y0: 98, z0: 96 },
   { id: '1t4ayKzIzCfpBW0NJ7gZR5', uri: 'spotify:playlist:1t4ayKzIzCfpBW0NJ7gZR5', title: 'Silver stripes of sound', artist: 'Daniel Klöck', year: '2015', cover: 'https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da847d762b97ea722e284a818ef7', tracks: [], trackCount: 58, wall: true, y0: 120, z0: 96 },
   { id: '2nXctcrK51Dgb1Q1Spqf9r', uri: 'spotify:playlist:2nXctcrK51Dgb1Q1Spqf9r', title: 'Tres Tres Chic', artist: 'Daniel Klöck', year: '2014', cover: 'https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da84749549e95118d23084277d4f', tracks: [], trackCount: 74, wall: true, y0: 142, z0: 96 },
-  { id: '46tqRxoSJVkReQMqH9dgYV', uri: 'spotify:playlist:46tqRxoSJVkReQMqH9dgYV', title: 'Emoji Cultist', artist: 'Daniel Klöck', year: '2025', cover: 'https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da84a7662947320976db4d1e6963', tracks: [], trackCount: 62, wall: true, y0: 98, z0: 74 },
+  { id: '39AJnAjm0n6rB7gvXjcmP0', uri: 'spotify:playlist:39AJnAjm0n6rB7gvXjcmP0', title: 'The devil\'s songs', artist: 'Daniel Klöck', year: '2024', cover: 'https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da84d724aade303b448df88d8e5b', tracks: [], trackCount: 42, wall: true, y0: 98, z0: 74 },
   { id: '7MKTRoYi9E2TzgomxU6in6', uri: 'spotify:playlist:7MKTRoYi9E2TzgomxU6in6', title: 'Desayuno Delux', artist: 'Daniel Klöck', year: '2024', cover: 'https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da84288e50f4a6a62e39c77e9d14', tracks: [], trackCount: 28, wall: true, y0: 120, z0: 74 },
   { id: '540gkEVIay1lnCblha7v5c', uri: 'spotify:playlist:540gkEVIay1lnCblha7v5c', title: 'Mr Turnip', artist: 'Daniel Klöck', year: '2021', cover: 'https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da8475a28c3e277ed869ebdc288e', tracks: [], trackCount: 79, wall: true, y0: 142, z0: 74 },
   { id: '6CZblsOBYjrr5eBKbsON4E', uri: 'spotify:playlist:6CZblsOBYjrr5eBKbsON4E', title: 'High contranst', artist: 'Daniel Klöck', year: '2022', cover: 'https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da842264e98455b2ca0890db9101', tracks: [], trackCount: 114, wall: true, y0: 98, z0: 52 },
@@ -891,8 +892,8 @@ function bookPlace(b){ // the book's spot in the room: [x, y, z, w, d, h] of its
 function drawBook(b){ // a closed book: cover block with the pages showing; standing books show their spine
   if (b.taken) return;
   const q = bookPlace(b), c = b.color, hov = hover === b;
-  const lift = hov && q.standing ? 1.2 : 0;                                     // a standing book rises a little when pointed at…
-  if (hov && !q.standing) { q.y += 1.8; }                                        // …a lying one is pulled forward out of its pile by its spine, towards the room
+  const lift = hov && q.standing ? 1.2 : 0;                                     // a standing book rises a little when pointed at
+  if (hov && !q.standing) { q.y += 1.8; }                                        // a lying one is pulled forward out of its pile by its spine, towards the room
   if (q.standing) { // like the records in the cabinet: only the thin spine faces the room, with a small label band
     box(q.x, q.y, q.z+lift, q.w, q.d, q.h, c, {top:0.9});
     box(q.x+0.25, q.y+q.d-0.2, q.z+lift+q.h*0.55, q.w-0.5, 0.2, 1.6, [241,228,200]);   // the label band on the spine
