@@ -97,7 +97,6 @@ body:not(.owner) .search,body:not(.owner) .album .x,body:not(.owner) #share,body
     <input id="q" type="search" placeholder="Search album or artist… e.g. Kind of Blue Miles Davis" autocomplete="off">
     <div class="results" id="results"></div>
   </div>
-  <div class="status" id="status">The cabinet is empty. Search for an album and add it to the shelf.</div>
 </header>
 <main>
   <div class="stage"><canvas id="c"></canvas>
@@ -163,7 +162,7 @@ function dominant(img){
 }
 
 /* ---------- Spotify auth (Authorization Code + PKCE, no server) ---------- */
-const REDIRECT = location.origin + location.pathname;
+const REDIRECT = location.origin + location.pathname.replace(/index\.html$/, '');   // …/plattenstube/ and …/plattenstube/index.html are the same page for Spotify
 const SCOPES = 'streaming user-read-email user-read-private user-modify-playback-state user-read-playback-state';
 let auth = null;
 try { auth = JSON.parse(localStorage.getItem('plattenstube.auth') || 'null'); } catch (e) {}
@@ -229,14 +228,41 @@ async function loadSharedCollection(){ // guests: the cabinet is the owner's, ta
   if (!ids) { if (!albums.length) setStatus('The record collection has not been published yet.'); return; }   // offline or not published: keep what we had
   ids = [...new Set(ids.filter(id => /^[A-Za-z0-9]+$/.test(id)))].slice(0, SLOTS);
   const have = Object.fromEntries(albums.map(a => [a.id, a]));
-  const next = [];
-  for (const id of ids) {
-    if (have[id]) { next.push(have[id]); continue; }
-    setStatus(`Fetching the collection… ${next.length + 1}/${ids.length}`);
-    try { next.push(await fetchAlbum(id)); } catch (e) {}
+  albums = ids.filter(id => have[id]).map(id => have[id]);                           // what we already know is in the cabinet right away
+  albums.forEach(a => { a.taken = false; a.arriving = false; coverImage(a); }); sortAlbums(); renderShelf(); draw();
+  const missing = ids.filter(id => !have[id]);
+  if (!missing.length) { save(); return; }
+  bringing.fetching = true;                                                           // the rest he carries in as it arrives
+  (async () => {
+    for (const id of missing) {
+      try { const a = await fetchAlbum(id); a.taken = true; a.arriving = true; coverImage(a); albums.push(a); sortAlbums(); renderShelf(); }
+      catch (e) {}
+    }
+    bringing.fetching = false; save();
+  })();
+}
+/* ---------- guests: while the collection loads, he carries the records in from the edge, a stack at a time, and slots them ---------- */
+const bringing = { fetching: false, stack: [], active: false };
+function bringTick(now){
+  if (!bringing.active || !scene.manIn || busy()) return;
+  const m = scene.man, edge = HER_SPOTS.edge, at = { x: m.x, y: m.y }, steps = [];
+  if (bringing.stack.length) { // slot the top record of the stack
+    const a = bringing.stack[0], i = albums.indexOf(a);
+    if (i < 0) { bringing.stack.shift(); return; }
+    steps.push(...walkTo(at, shelfPosFor(i)));
+    steps.push(wait(350, () => { a.taken = false; a.arriving = false; bringing.stack.shift(); m.hold = bringing.stack[0] || null; m.stackN = bringing.stack.length; draw(); }));
+    anim.queue = steps; return;
   }
-  albums = next; albums.forEach(a => { a.taken = false; coverImage(a); }); sortAlbums(); save(); renderShelf(); draw();
-  setStatus(albums.length ? `${albums.length} records in the cabinet. Pick one.` : 'The record collection is empty.');
+  const pending = albums.filter(a => a.arriving && !bringing.stack.includes(a));
+  const atEdge = Math.hypot(m.x - edge.x, m.y - edge.y) < 1;
+  if (pending.length) {
+    if (!atEdge) { anim.queue = walkTo(at, edge); return; }
+    steps.push(wait(700, () => { m.facing = -1; bringing.stack = pending.slice(0, 12); m.hold = bringing.stack[0]; m.stackN = bringing.stack.length; }));   // picks up a stack
+    anim.queue = steps; return;
+  }
+  if (bringing.fetching) { if (!atEdge) anim.queue = walkTo(at, edge); return; }          // nothing here yet: he waits at the edge for the next ones
+  bringing.active = false; m.hold = null; m.stackN = 0; save(); renderShelf();            // all in: now he picks one and settles down
+  firstRecord(at);
 }
 document.getElementById('export').onclick = () => { // owner: download collection.json for the server
   const blob = new Blob([JSON.stringify({ ids: albums.map(a => a.id) }, null, 0)], { type: 'application/json' });
@@ -310,13 +336,13 @@ document.getElementById('disconnect').onclick = () => { // he puts the record ba
 };
 
 /* ---------- search ---------- */
-const q = document.getElementById('q'), results = document.getElementById('results'), statusEl = document.getElementById('status');
+const q = document.getElementById('q'), results = document.getElementById('results');
 let timer, searchSeq = 0;
 q.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(search, 350); });
 q.addEventListener('keydown', e => { if (e.key === 'Escape') results.classList.remove('open'); if (e.key === 'Enter') { clearTimeout(timer); search(); } });
 document.addEventListener('click', e => { if (!e.target.closest('.search')) results.classList.remove('open'); });
 q.addEventListener('focus', () => { if (results.children.length) results.classList.add('open'); });
-function setStatus(t){ statusEl.textContent = t; }
+function setStatus(t){ /* the room tells the story; there is no status line */ }
 
 async function search(){
   const text = q.value.trim();
@@ -572,7 +598,7 @@ function slotRect(i){ // spine i: stands in cubby floor(i/PER), position i%PER
 
 const CHAIRPOS = {x:98,y:106};
 const SEAT = {x:CHAIRPOS.x+4, y:CHAIRPOS.y+12}; // centred on the cushion, shins drop in front of the seat edge
-const scene = { man:{x:SEAT.x,y:SEAT.y,z:0,sitting:true,bob:0,facing:1,hold:null}, manIn:false, record:null, armDown:false, runout:0, angle:0, t:0, doze:false, playSince:0 };
+const scene = { man:{x:SEAT.x,y:SEAT.y,z:0,sitting:true,bob:0,facing:1,hold:null}, manIn:false, record:null, armDown:false, runout:0, angle:0, t:0, doze:false, dozeUntil:0, playSince:0 };
 const TTPOS = {x:34,y:112};       // table for the turntable
 const anim = { queue:[], cur:null, start:0 };
 
@@ -713,8 +739,8 @@ function standUp(steps){
   return POS.stand;
 }
 function dozeTick(now){ // late in a long album he dozes off; any action wakes him, and so does the end of the side
-  if (scene.doze) { if (!player.playing && !scene.runout && !busy()) scene.doze = false; return; }
-  if (player.playing && scene.manIn && scene.man.sitting && !busy() && !her.visible && now - scene.playSince > 9*60000 && drinkPhase(now) < 0 && Math.random() < 0.002) scene.doze = true;
+  if (scene.doze) { if ((!player.playing && !scene.runout && !busy()) || now > scene.dozeUntil) scene.doze = false; return; }
+  if (player.playing && scene.manIn && scene.man.sitting && !busy() && !her.visible && now - scene.playSince > 9*60000 && drinkPhase(now) < 0 && Math.random() < 0.002) { scene.doze = true; scene.dozeUntil = now + 30000 + Math.random()*90000; }   // a nap of half a minute to two minutes
 }
 function sitDown(from, steps){ const m = scene.man; steps.push(...walkTo(from, POS.stand)); steps.push(wait(200, () => { m.x = SEAT.x; m.y = SEAT.y; m.sitting = true; m.facing = 1; })); }
 
@@ -772,25 +798,28 @@ function volumeTick(now){
 function enterRoom(){
   if (scene.manIn) return;
   const m = scene.man, edge = HER_SPOTS.edge;
-  scene.manIn = true; m.sitting = false; m.x = edge.x; m.y = edge.y; m.facing = -1; m.hold = null;
-  const steps = [wait(1500, () => {})];
+  scene.manIn = true; m.sitting = false; m.x = edge.x; m.y = edge.y; m.facing = -1; m.hold = null; m.stackN = 0;
+  if (bringing.fetching || albums.some(a => a.arriving)) { bringing.active = true; anim.queue = [wait(1500, () => {})]; return; }   // guests: the records are still coming in; he carries them to the cabinet first
+  firstRecord(edge, 1500);
+}
+function firstRecord(from, pause = 0){ // he picks a record at random, puts it on and settles into the chair
+  const m = scene.man, steps = pause ? [wait(pause, () => {})] : [];
   if (albums.length) {
     const i = Math.floor(Math.random() * albums.length), a = albums[i], shelf = shelfPosFor(i);
-    steps.push(...walkTo(edge, shelf));
+    steps.push(...walkTo(from, shelf));
     steps.push(wait(500, () => { m.hold = a; a.taken = true; }));
     steps.push(...walkTo(shelf, POS.tt));
     steps.push(wait(400, () => { m.hold = null; scene.record = a; }));
     steps.push(wait(500, () => { scene.armDown = true; playCrackle(3200); startPlayback(a); }));
     sitDown(POS.tt, steps);
-    setStatus(`He picks "${a.title}" to start with.`);
-  } else { sitDown(edge, steps); setStatus('The cabinet is empty. Search for an album and add it to the shelf.'); }
+  } else sitDown(from, steps);
   anim.queue = steps;
 }
 function leaveRoom(){ // logged out: everybody out, nothing on the turntable
   document.getElementById('disconnect').disabled = false;
   scene.manIn = false; her.visible = false; her.anim.queue = []; her.anim.cur = null;
   anim.queue = []; anim.cur = null; scene.record = null; scene.armDown = false; albums.forEach(b => b.taken = false);
-  scene.man.sitting = true; scene.man.x = SEAT.x; scene.man.y = SEAT.y; scene.man.hold = null;
+  scene.man.sitting = true; scene.man.x = SEAT.x; scene.man.y = SEAT.y; scene.man.hold = null; scene.man.stackN = 0; bringing.active = false; bringing.stack = [];
   nowEl.innerHTML = '<span style="color:var(--muted)">Nothing yet. Pick a record from the cabinet.</span>';
 }
 function lampTick(now){ // once the room looks noticeably dim he gets up and switches the lamp on; in the morning, once it is clearly light, he switches it off
@@ -883,7 +912,7 @@ function herTick(now){
   if (!scene.man.sitting || !scene.manIn || busy() || drinkPhase(now) >= 0) return;      // she only comes in while he is settled in his chair
   const candleDue = (candle.lit ? mood.dark > 0.12 : mood.dark > 0.3) !== candle.lit && now > her.candleNext;   // once the room is noticeably dim (or light again) she comes to see to the candle
   if (!candleDue && now < her.next) return;
-  const pick = candleDue ? 'candle' : ['cat', 'read', 'talk'][Math.floor(Math.random()*3)];
+  const pick = candleDue ? 'candle' : (scene.doze ? ['cat', 'read'] : ['cat', 'read', 'talk'])[Math.floor(Math.random()*(scene.doze ? 2 : 3))];   // she lets him sleep: no chat while he dozes
   const q = [], d = HER_SPOTS.edge;
   her.visible = true; her.x = d.x; her.y = d.y; her.facing = -1; her.act = pick; her.hold = null;
   q.push(wait(2000, () => {}));                                                        // appears at the edge, pauses, then sets off
@@ -1311,6 +1340,7 @@ function drawMan(){
       // record sleeve held in front
       const a = m.hold, img = coverImage(a);
       const [sx,sy] = P(x-1, y+14, z+30);
+      for (let k = Math.min(3, (m.stackN || 1) - 1); k > 0; k--) { const [bx, by] = P(x-1, y+14-1.2*k, z+30); ctx.save(); ctx.transform(1,0.5,0,1,bx,by); ctx.fillStyle = k % 2 ? '#2a2420' : '#d8ccb0'; ctx.fillRect(0,0,16,16); ctx.restore(); }   // more sleeves behind: a stack
       ctx.save(); ctx.transform(1,0.5,0,1,sx,sy);
       if (img.complete && img.naturalWidth) { try { ctx.drawImage(img,0,0,16,16); } catch(e){ ctx.fillStyle=a.color||'#888'; ctx.fillRect(0,0,16,16);} } else { ctx.fillStyle=a.color||'#888'; ctx.fillRect(0,0,16,16); }
       ctx.restore();
@@ -1428,7 +1458,6 @@ function draw(){
     if (mood.candle > 0.03) { const [cx, cy] = P(TTPOS.x+31, TTPOS.y+26.5, 29); const c = ctx.createRadialGradient(cx, cy, 2, cx, cy, 40); c.addColorStop(0, `rgba(255,170,90,${0.28*dk*mood.candle})`); c.addColorStop(1, 'rgba(255,170,90,0)'); ctx.fillStyle = c; ctx.fillRect(0, 0, W, H); }
   }
   // empty hint
-  if (!albums.length) { ctx.fillStyle='rgba(241,228,200,.7)'; ctx.font='10px Silkscreen, monospace'; ctx.fillText('EMPTY CABINET', CX+CAB.x-CAB.y+18, CY+(CAB.x+CAB.y)/2-CAB.h-14); }
 }
 
 // click / hover on cabinet covers
@@ -1474,6 +1503,7 @@ canvas.addEventListener('click', e => { if (!scene.manIn) return; const [x,y]=ca
 function loop(now){
   scene.t = now;
   stepAnim(now);
+  bringTick(now);
   herTick(now);
   volumeTick(now);
   lampTick(now);
