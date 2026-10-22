@@ -216,13 +216,18 @@ function pendingImportFromHash(){
 async function fetchAlbum(id){ // one album by id -> the shelf's album record
   return albumRecord(await api('/albums/' + id));
 }
-async function fetchAlbums(ids){ // several at once (20 per call), far fewer requests than one by one
-  const out = [];
-  for (let i = 0; i < ids.length; i += 20) {
-    const d = await api('/albums?ids=' + ids.slice(i, i + 20).join(','));
-    (d.albums || []).forEach(a => { if (a) out.push(albumRecord(a)); });
+async function fetchAlbums(ids, onEach){ // one request per album (Spotify's development mode has no batch endpoint), a few in flight at a time, gently paced
+  const queue = ids.slice(); let lastErr = null;
+  async function worker(){
+    while (queue.length) {
+      const id = queue.shift();
+      try { const a = await fetchAlbum(id); onEach(a); }
+      catch (e) { lastErr = e; if (/429|rate/i.test(e.message)) { queue.push(id); await new Promise(r => setTimeout(r, 3000)); } }
+      await new Promise(r => setTimeout(r, 150));
+    }
   }
-  return out;
+  await Promise.all([worker(), worker(), worker()]);
+  return lastErr;
 }
 function albumRecord(d){
   const tracks = (d.tracks && d.tracks.items || []).map(t => ({ title: t.name, uri: t.uri, preview: t.preview_url }));
@@ -259,13 +264,9 @@ async function loadSharedCollection(){ // guests: the cabinet is the owner's, ta
   if (!missing.length) { save(); return; }
   bringing.fetching = true;                                                           // the rest he carries in as it arrives
   (async () => {
-    let failed = null;
-    for (let i = 0; i < missing.length; i += 20) {
-      try { (await fetchAlbums(missing.slice(i, i + 20))).forEach(a => { a.taken = true; a.arriving = true; coverImage(a); albums.push(a); }); sortAlbums(); renderShelf(); }
-      catch (e) { failed = e.message; }
-    }
+    const err = await fetchAlbums(missing, a => { a.taken = true; a.arriving = true; coverImage(a); albums.push(a); sortAlbums(); renderShelf(); });
     bringing.fetching = false; save();
-    if (failed && !albums.length) nowEl.innerHTML = `<span style="color:var(--bad)">Could not load the collection from Spotify (${failed}).</span>`;
+    if (err && !albums.length) nowEl.innerHTML = `<span style="color:var(--bad)">Could not load the collection from Spotify (${err.message}).</span>`;
   })();
 }
 /* ---------- guests: while the collection loads, he carries the records in from the edge, a stack at a time, and slots them ---------- */
