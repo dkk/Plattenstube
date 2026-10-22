@@ -39,6 +39,9 @@ header h1{font-family:var(--display);font-size:16px;margin:0;letter-spacing:1px;
 .overlay .hint{color:var(--muted);font-size:17px}
 .primary.big{font-size:14px;padding:14px 22px;box-shadow:0 8px 30px rgba(0,0,0,.5)}
 .foot{display:flex;flex-direction:column;gap:8px;align-items:flex-start;padding:8px 12px;border-top:3px solid var(--line);margin-top:auto}
+.testpanel{position:absolute;left:8px;top:8px;display:flex;flex-direction:column;gap:4px;z-index:5;background:rgba(26,20,16,.7);padding:6px;border:2px solid var(--line)}
+.testpanel b{font-family:var(--display);font-size:9px;color:var(--muted)}
+.testpanel button{background:var(--panel2);border:2px solid var(--line);color:var(--fg);padding:1px 6px;font-size:15px;cursor:pointer;text-align:left}
 .whoRow{display:flex;gap:8px;align-items:center;width:100%;min-width:0}
 .whoRow .hint{color:var(--muted)}
 .whoRow #who{color:var(--accent);flex:1;min-width:0;overflow-wrap:anywhere}
@@ -81,7 +84,7 @@ aside h2{font-family:var(--display);font-size:11px;margin:0;padding:10px 12px;bo
 .album .t b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .album .t span{color:var(--muted);font-size:17px}
 .album .x{background:none;border:0;color:var(--muted);cursor:pointer;padding:4px}
-body:not(.owner) .search,body:not(.owner) .album .x,body:not(.owner) #share,body:not(.owner) #export{display:none}  /* guests get the owner's collection and cannot change it */
+body:not(.owner) .search,body:not(.owner) .album .x,body:not(.owner) #share,body:not(.owner) #export,body:not(.owner) #reload,body:not(.owner) .testpanel{display:none}  /* guests get the owner's collection and cannot change it */
 .album .x:hover{color:var(--bad)}
 .empty{padding:14px 12px;color:var(--muted)}
 @media (max-width:700px){
@@ -100,6 +103,17 @@ body:not(.owner) .search,body:not(.owner) .album .x,body:not(.owner) #share,body
 </header>
 <main>
   <div class="stage"><canvas id="c"></canvas>
+    <div class="testpanel" id="testpanel">
+      <b>TEST</b>
+      <button data-t="day">day</button><button data-t="sunset">sunset</button><button data-t="dusk">dusk</button><button data-t="night">night</button><button data-t="realtime">real time</button>
+      <button data-t="lamp">toggle lamp (he walks)</button>
+      <button data-t="end">end of side</button>
+      <button data-t="doze">doze off</button>
+      <button data-t="wake">wake (pick record)</button>
+      <button data-t="catwake">cat wakes</button>
+      <button data-t="crackle">crackle</button>
+      <button data-t="her-cat">her: cat</button><button data-t="her-read">her: read</button><button data-t="her-candle">her: candle</button><button data-t="her-talk">her: talk</button>
+    </div>
     <div class="overlay" id="overlay"><button id="connect" class="primary big">Connect to Spotify</button><div class="hint">Needs Spotify Premium. The room fills once you are in.</div></div>
   </div>
   <aside>
@@ -117,6 +131,7 @@ body:not(.owner) .search,body:not(.owner) .album .x,body:not(.owner) #share,body
       <div class="whoRow"><span class="hint">Spotify:</span><span id="who"></span></div>
       <button id="share" class="mini" title="Anyone who opens the link gets these records added to their cabinet">Copy collection link</button>
       <button id="export" class="mini" title="Download collection.json — put it next to plattenstube.html on the server and every guest gets this collection">Save collection file</button>
+      <button id="reload" class="mini" title="Empty the cabinet in this browser and load collection.json again">Reload collection</button>
       <button id="disconnect" class="mini" hidden>Log out</button>
     </div>
   </aside>
@@ -314,7 +329,7 @@ async function updateAuthUI(){
   try {
     me = await api('/me'); who.textContent = `${me.display_name || me.id}`;
     isOwner = me.id === OWNER_ID && !guestView; document.body.classList.toggle('owner', isOwner);
-    if (!isOwner) await loadSharedCollection();                                   // guests get the owner's cabinet
+    if (!isOwner || !albums.length) await loadSharedCollection();                 // guests get the owner's cabinet; the owner too, on a browser that has no cabinet yet (e.g. first visit on the website)
     initPlayer(); enterRoom();
   }
   catch (e) { who.textContent = 'Session problem: ' + e.message; }
@@ -612,7 +627,8 @@ const PLANTS = [[130,30],[152,96],[154,128]]; // [x,y]; the second one is the bi
 const CATPOS = { x: 88, y: 153, w: 19, d: 14 };
 const LAMP = { x: 116, y: 86, standAt: { x: 132, y: 88 } };   // floor lamp behind the armchair, and where he stands to switch it
 /* ---------- time of day (real clock): darkness 0 by day, rising through dusk to 1 at night ---------- */
-function hourNow(){ const d = new Date(); return d.getHours() + d.getMinutes()/60; }
+let clockOverride = null;                                     // hours, for testing
+function hourNow(){ if (clockOverride !== null) return clockOverride; const d = new Date(); return d.getHours() + d.getMinutes()/60; }
 function darkness(){ // 0 by day; dusk settles at 0.5 (18:00–20:00); night is 1 (21:00–6:00); the ramps in between take an hour or two
   const h = hourNow();
   if (h >= 21 || h < 6) return 1;
@@ -908,12 +924,25 @@ const talk = { until: 0, start: 0 };             // the two of them chatting aft
 const talking = () => scene.t < talk.until;
 const speaker = () => Math.floor((scene.t - talk.start) / 1700) % 2 === 0 ? 'her' : 'him';   // they take turns
 const herWalkTo = walkTo;
+let herRequest = null;                                                                    // (test buttons)
+document.querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
+  const t = b.dataset.t;
+  if (t === 'day') clockOverride = 12; else if (t === 'sunset') clockOverride = 17.6; else if (t === 'dusk') clockOverride = 18.5; else if (t === 'night') clockOverride = 22; else if (t === 'realtime') clockOverride = null;
+  else if (t === 'lamp') { lamp.trip = false; clockOverride = lamp.on ? 12 : 22; }
+  else if (t === 'end') endOfSide();
+  else if (t === 'doze') { if (player.playing && scene.man.sitting) { scene.doze = true; scene.dozeUntil = scene.t + 30000 + Math.random()*90000; } }
+  else if (t === 'wake') { if (albums.length) selectAlbum(Math.floor(Math.random()*albums.length)); }
+  else if (t === 'catwake') { catMood.visitor = scene.t + 6000; }
+  else if (t === 'crackle') playCrackle(3200);
+  else if (t.startsWith('her-')) herRequest = t.slice(4);
+});
+document.getElementById('reload').onclick = () => { albums = []; save(); location.reload(); };   // owner: empty this browser's cabinet and load collection.json afresh
 function herTick(now){
   if (her.visible) { runQueue(her, her.anim, now); if (!her.anim.cur && !her.anim.queue.length) { her.visible = false; her.act = null; her.next = now + 70000 + Math.random()*110000; } return; }
   if (!scene.man.sitting || !scene.manIn || busy() || drinkPhase(now) >= 0) return;      // she only comes in while he is settled in his chair
   const candleDue = (candle.lit ? mood.dark > 0.12 : mood.dark > 0.3) !== candle.lit && now > her.candleNext;   // once the room is noticeably dim (or light again) she comes to see to the candle
-  if (!candleDue && now < her.next) return;
-  const pick = candleDue ? 'candle' : (scene.doze ? ['cat', 'read'] : ['cat', 'read', 'talk'])[Math.floor(Math.random()*(scene.doze ? 2 : 3))];   // she lets him sleep: no chat while he dozes
+  if (!candleDue && now < her.next && !herRequest) return;
+  const pick = herRequest || (candleDue ? 'candle' : (scene.doze ? ['cat', 'read'] : ['cat', 'read', 'talk'])[Math.floor(Math.random()*(scene.doze ? 2 : 3))]); herRequest = null;   // she lets him sleep: no chat while he dozes
   const q = [], d = HER_SPOTS.edge;
   her.visible = true; her.x = d.x; her.y = d.y; her.facing = -1; her.act = pick; her.hold = null;
   q.push(wait(2000, () => {}));                                                        // appears at the edge, pauses, then sets off
