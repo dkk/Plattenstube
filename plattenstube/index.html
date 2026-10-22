@@ -257,7 +257,7 @@ function bringTick(now){
   const atEdge = Math.hypot(m.x - edge.x, m.y - edge.y) < 1;
   if (pending.length) {
     if (!atEdge) { anim.queue = walkTo(at, edge); return; }
-    steps.push(wait(700, () => { m.facing = -1; bringing.stack = pending.slice(0, 12); m.hold = bringing.stack[0]; m.stackN = bringing.stack.length; }));   // picks up a stack
+    steps.push(wait(700, () => { m.facing = -1; bringing.stack = pending.slice(0, 15); m.hold = bringing.stack[0]; m.stackN = bringing.stack.length; }));   // picks up a stack
     anim.queue = steps; return;
   }
   if (bringing.fetching) { if (!atEdge) anim.queue = walkTo(at, edge); return; }          // nothing here yet: he waits at the edge for the next ones
@@ -745,7 +745,7 @@ function dozeTick(now){ // late in a long album he dozes off; any action wakes h
 function sitDown(from, steps){ const m = scene.man; steps.push(...walkTo(from, POS.stand)); steps.push(wait(200, () => { m.x = SEAT.x; m.y = SEAT.y; m.sitting = true; m.facing = 1; })); }
 
 function selectAlbum(i){
-  const a = albums[i]; if (!a || busy() || !scene.manIn) return;
+  const a = albums[i]; if (!a || busy() || !scene.manIn || bringing.active) return;   // not while he is still filling the cabinet
   if (a === scene.record) { if (!player.playing) togglePlayback(); return; } // already on the turntable: just start it again
   const steps = [];
   let at = standUp(steps);
@@ -782,7 +782,7 @@ volSlider.addEventListener('input', () => {
   volume.due = scene.t + VOL_GRACE; volHint.hidden = false; volHint.textContent = 'he will go and set it in a moment…';
 });
 function volumeTick(now){
-  if (!volume.due || now < volume.due || volume.trip || !scene.manIn) return;
+  if (!volume.due || now < volume.due || volume.trip || !scene.manIn || bringing.active) return;   // (after the cabinet is filled)
   volume.due = 0; volume.trip = true;
   const steps = [];
   standUp(steps);                                                                                     // (after anything already queued, he is back in his chair)
@@ -799,7 +799,8 @@ function enterRoom(){
   if (scene.manIn) return;
   const m = scene.man, edge = HER_SPOTS.edge;
   scene.manIn = true; m.sitting = false; m.x = edge.x; m.y = edge.y; m.facing = -1; m.hold = null; m.stackN = 0;
-  if (bringing.fetching || albums.some(a => a.arriving)) { bringing.active = true; anim.queue = [wait(1500, () => {})]; return; }   // guests: the records are still coming in; he carries them to the cabinet first
+  albums.forEach(a => { a.taken = true; a.arriving = true; });                           // every visit starts with him carrying the records in and filling the cabinet
+  if (bringing.fetching || albums.length) { bringing.active = true; renderShelf(); draw(); anim.queue = [wait(1500, () => {})]; return; }
   firstRecord(edge, 1500);
 }
 function firstRecord(from, pause = 0){ // he picks a record at random, puts it on and settles into the chair
@@ -818,7 +819,7 @@ function firstRecord(from, pause = 0){ // he picks a record at random, puts it o
 function leaveRoom(){ // logged out: everybody out, nothing on the turntable
   document.getElementById('disconnect').disabled = false;
   scene.manIn = false; her.visible = false; her.anim.queue = []; her.anim.cur = null;
-  anim.queue = []; anim.cur = null; scene.record = null; scene.armDown = false; albums.forEach(b => b.taken = false);
+  anim.queue = []; anim.cur = null; scene.record = null; scene.armDown = false; albums.forEach(b => { b.taken = false; b.arriving = false; });
   scene.man.sitting = true; scene.man.x = SEAT.x; scene.man.y = SEAT.y; scene.man.hold = null; scene.man.stackN = 0; bringing.active = false; bringing.stack = [];
   nowEl.innerHTML = '<span style="color:var(--muted)">Nothing yet. Pick a record from the cabinet.</span>';
 }
@@ -838,7 +839,7 @@ function lampTick(now){ // once the room looks noticeably dim he gets up and swi
   setStatus(want ? 'Getting dark; he switches the lamp on.' : 'Morning; he switches the lamp off.');
 }
 function togglePlayback(){ // tap on the record player or the panel button: walk over, lift or lower the arm, sit back down
-  if (busy()) return;
+  if (busy() || bringing.active) return;
   if (!scene.record) { setStatus('Nothing on the turntable. Pick a record from the cabinet.'); return; }
   const steps = [];
   standUp(steps);
@@ -1516,7 +1517,7 @@ function loop(now){
   draw();
   requestAnimationFrame(loop);
 }
-albums.forEach(a => { a.taken = false; coverImage(a); });
+albums.forEach(a => { a.taken = false; a.arriving = false; coverImage(a); });
 sortAlbums();
 renderShelf();
 requestAnimationFrame(loop);
